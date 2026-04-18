@@ -9,6 +9,7 @@
 
 - [ ] **INFRA-01**: Projeto Next.js 15 App Router + TypeScript strict + Tailwind v4 + shadcn/ui (New York) + Biome + pnpm criado, buildando e rodando localmente
 - [ ] **INFRA-02**: Deploy na Vercel configurado com production URL pública e preview branches automáticos via git
+- [ ] **INFRA-03**: Rate limiting básico na rota `/api/negotiate/stream` (ex: máximo de N chamadas por IP por minuto via headers ou middleware) + kill switch via variável de ambiente (`NEGOTIATION_ENABLED=false`) para desligar o endpoint sem deploy
 
 ### FIPE
 
@@ -35,12 +36,14 @@
 - [ ] **INTEL-03**: Few-shot canônico da negociação Audi Q5 (mockChatHistories[1] do protótipo JSX) incorporado no system prompt como exemplo de negociação bem conduzida
 - [ ] **INTEL-04**: Painel de configuração do agente na UI: targetDiscount, maxRounds (default 6), tone (formal/casual), initialAnchorStrategy (agressivo/moderado); parâmetros persistidos em localStorage e editáveis sem reload
 - [ ] **INTEL-05**: Componente `<AgentThinking>` opcional que exibe o rationale do agente (via tool calls ou chain-of-thought estruturado), ativável via toggle
+- [ ] **INTEL-06**: Benchmark manual de N negociações com scorecard mínimo (redução média %, rodadas médias, qualidade subjetiva 1–5) exibido ao final da fase, como gate de conclusão da Fase 2
 
 ### Simulação & Batch (Fase 3)
 
 - [ ] **BATCH-01**: Rota `/api/simulate-pf` implementa segundo Claude atuando como PF com persona configurável (resistente, ansioso, bem-informado, desesperado); system prompts diferentes por persona
 - [ ] **BATCH-02**: Página `/batch` aceita lista de anúncios (colável como CSV ou JSON) + seleção de persona; executa loop agente–PF-sim sem intervenção humana, com limite de rodadas e timeout para evitar loops infinitos
 - [ ] **BATCH-03**: Dashboard de métricas agregadas exibe: taxa de fechamento, % redução média vs FIPE, número médio de rodadas, fee teórico médio (6% da economia capturada)
+- [ ] **BATCH-04**: Cap de custo configurável por execução de batch (em tokens ou equivalente em R$); estimativa de custo exibida antes de iniciar; kill automático do batch se o cap for ultrapassado durante a execução
 
 ### Análise & Export (Fase 4)
 
@@ -80,36 +83,39 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 1 | Pending |
-| INFRA-02 | Phase 1 | Pending |
-| FIPE-01 | Phase 1 | Pending |
-| FIPE-02 | Phase 1 | Pending |
-| NEG-01 | Phase 1 | Pending |
-| NEG-02 | Phase 1 | Pending |
-| NEG-03 | Phase 1 | Pending |
-| NEG-04 | Phase 1 | Pending |
-| NEG-05 | Phase 1 | Pending |
-| STATE-01 | Phase 1 | Pending |
-| STATE-02 | Phase 1 | Pending |
-| INTEL-01 | Phase 2 | Pending |
-| INTEL-02 | Phase 2 | Pending |
-| INTEL-03 | Phase 2 | Pending |
-| INTEL-04 | Phase 2 | Pending |
-| INTEL-05 | Phase 2 | Pending |
-| BATCH-01 | Phase 3 | Pending |
-| BATCH-02 | Phase 3 | Pending |
-| BATCH-03 | Phase 3 | Pending |
-| EXPORT-01 | Phase 4 | Pending |
-| EXPORT-02 | Phase 4 | Pending |
-| EXPORT-03 | Phase 4 | Pending |
-| EXPORT-04 | Phase 4 | Pending |
-| EXPORT-05 | Phase 4 | Pending |
+| INFRA-01 | Phase 1 — Chat Manual Funcional | Pending |
+| INFRA-02 | Phase 1 — Chat Manual Funcional | Pending |
+| INFRA-03 | Phase 1 — Chat Manual Funcional | Pending |
+| FIPE-01 | Phase 1 — Chat Manual Funcional | Pending |
+| FIPE-02 | Phase 1 — Chat Manual Funcional | Pending |
+| NEG-01 | Phase 1 — Chat Manual Funcional | Pending |
+| NEG-02 | Phase 1 — Chat Manual Funcional | Pending |
+| NEG-03 | Phase 1 — Chat Manual Funcional | Pending |
+| NEG-04 | Phase 1 — Chat Manual Funcional | Pending |
+| NEG-05 | Phase 1 — Chat Manual Funcional | Pending |
+| STATE-01 | Phase 1 — Chat Manual Funcional | Pending |
+| STATE-02 | Phase 1 — Chat Manual Funcional | Pending |
+| INTEL-01 | Phase 2 — Inteligência do Agente | Pending |
+| INTEL-02 | Phase 2 — Inteligência do Agente | Pending |
+| INTEL-03 | Phase 2 — Inteligência do Agente | Pending |
+| INTEL-04 | Phase 2 — Inteligência do Agente | Pending |
+| INTEL-05 | Phase 2 — Inteligência do Agente | Pending |
+| INTEL-06 | Phase 2 — Inteligência do Agente | Pending |
+| BATCH-01 | Phase 3 — PF Simulado e Batch | Pending |
+| BATCH-02 | Phase 3 — PF Simulado e Batch | Pending |
+| BATCH-03 | Phase 3 — PF Simulado e Batch | Pending |
+| BATCH-04 | Phase 3 — PF Simulado e Batch | Pending |
+| EXPORT-01 | Phase 4 — Análise, Export e A/B | Pending |
+| EXPORT-02 | Phase 4 — Análise, Export e A/B | Pending |
+| EXPORT-03 | Phase 4 — Análise, Export e A/B | Pending |
+| EXPORT-04 | Phase 4 — Análise, Export e A/B | Pending |
+| EXPORT-05 | Phase 4 — Análise, Export e A/B | Pending |
 
 **Coverage:**
-- v1 requirements: 24 total
-- Mapped to phases: 24
+- v1 requirements: 27 total
+- Mapped to phases: 27
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-18*
-*Last updated: 2026-04-18 after initial definition*
+*Last updated: 2026-04-18 after user review (added INFRA-03, INTEL-06, BATCH-04)*
