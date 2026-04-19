@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx:*)",
+      "Bash(rm -f ./__TRACKED_VAR__/cache/gsd-update-check.json)",
+      "Bash(rm -f __TRACKED_VAR__/__TRACKED_VAR__/cache/gsd-update-check.json)",
+      "Bash(node:*)",
+      "Bash(find .:*)",
+      "Skill(gsd-plan-phase)",
+      "WebSearch",
+      "Bash(ls -la src)",
+      "Bash(pnpm --version)",
+      "Bash(npm --version)",
+      "Bash(npm i *)",
+      "Bash(pnpm create *)",
+      "Read(//tmp/scaffold-tmp/**)",
+      "Read(//tmp/scaffold-tmp/next-scaffold/**)",
+      "Bash(pnpm add *)",
+      "Bash(pnpm biome *)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm build *)",
+      "Bash(git check-ignore *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(git add *)",
+      "Bash(git commit --no-verify -m 'feat\\(01-01\\): scaffold Next.js 15 + Tailwind v4 + TS strict + design tokens *)",
+      "Bash(pnpm dlx *)",
+      "Bash(git reset *)",
+      "Bash(git restore *)",
+      "Bash(pnpm vitest *)",
+      "Bash(git commit *)",
+      "Bash(pnpm why *)",
+      "Bash(git merge *)",
+      "Bash(git worktree *)",
+      "Bash(git branch *)"
+    ]
+  }
+}
