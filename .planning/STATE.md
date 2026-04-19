@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-04-18)
 ## Current Position
 
 Phase: 1 of 4 (Chat Manual Funcional)
-Plan: 1 of 8 in current phase (Wave 0 done)
-Status: Wave 1 ready to execute (Plan 01-02 — Zod schemas)
-Last activity: 2026-04-19 — Plan 01-01 complete (Next.js 15 + Tailwind v4 + shadcn + Biome + Vitest scaffold green)
+Plan: 2 of 8 in current phase (Waves 0-1 done)
+Status: Wave 2 ready to execute (parallel: Plans 01-03, 01-04, 01-05)
+Last activity: 2026-04-19 — Plan 01-02 complete (Zod schemas + types + parseFipeValor; 43 vitest green)
 
-Progress: [█░░░░░░░░░] 12.5%
+Progress: [██░░░░░░░░] 25%
 
 ## Performance Metrics
 
