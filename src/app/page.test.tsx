@@ -1,12 +1,18 @@
+import { useNegotiationStore } from "@/lib/stores/negotiation";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import Page from "./page";
 
-describe("homepage smoke", () => {
-  it("renders the playground heading", () => {
+beforeEach(() => {
+  localStorage.clear();
+  useNegotiationStore.setState({ currentSession: null, history: [] });
+});
+
+describe("NegotiationPage (idle state)", () => {
+  it("renders the 3-column layout with an idle placeholder in the center", () => {
     render(<Page />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "AutoAgent Negotiation Playground",
-    );
+    // Idle-state center placeholder (unique string; different from ContextPanel's
+    // "Preencha o anúncio para iniciar").
+    expect(screen.getByText(/Preencha o anúncio à esquerda/i)).toBeInTheDocument();
   });
 });

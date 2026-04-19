@@ -2,6 +2,23 @@ import "@testing-library/jest-dom/vitest";
 import { vi, afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
 
+// jsdom does not implement window.matchMedia; sonner/next-themes calls it on mount.
+if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}
+
 if (typeof crypto === "undefined" || typeof crypto.randomUUID !== "function") {
   const fakeUuid = (): `${string}-${string}-${string}-${string}-${string}` => {
     const rand = (n: number) =>
