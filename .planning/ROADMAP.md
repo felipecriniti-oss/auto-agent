@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 - [x] 01-01-PLAN.md — Project scaffold (Next 15 + Tailwind v4 + shadcn New York + Biome + pnpm + Vitest + deny-list) [INFRA-01]
 - [x] 01-02-PLAN.md — Zod schemas (listing, fipe cascade, negotiate) + parseFipeValor + Session/Message types [NEG-01, FIPE-01, NEG-02]
-- [ ] 01-03-PLAN.md — Zustand store with persist middleware + derived prices + arg extraction [STATE-01, STATE-02, NEG-02, NEG-05, FIPE-02]
+- [x] 01-03-PLAN.md — Zustand store with persist middleware + derived prices + arg extraction [STATE-01, STATE-02, NEG-02, NEG-05, FIPE-02]
 - [ ] 01-04-PLAN.md — /api/fipe route (Parallelum cascade + Zod + fuzzy match + rate limit) + shared rate-limit module [FIPE-01, FIPE-02, INFRA-03]
 - [ ] 01-05-PLAN.md — System prompt v1 builder (verbatim + injection defense + <arg> tags) + kill-switch helper [NEG-03, INFRA-03]
 - [ ] 01-06-PLAN.md — /api/negotiate SSE route handler (Anthropic stream + rate limit + kill switch + AbortController) [NEG-03, INFRA-03]

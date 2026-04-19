@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-04-18)
 ## Current Position
 
 Phase: 1 of 4 (Chat Manual Funcional)
-Plan: 2 of 8 in current phase (Waves 0-1 done)
-Status: Wave 2 ready to execute (parallel: Plans 01-03, 01-04, 01-05)
-Last activity: 2026-04-19 — Plan 01-02 complete (Zod schemas + types + parseFipeValor; 43 vitest green)
+Plan: 3 of 8 in current phase (Wave 0, 1, 2/3 done)
+Status: Wave 2 in progress — Plans 01-04 (FIPE API) and 01-05 (system prompt) pending
+Last activity: 2026-04-19 — Plan 01-03 complete (Zustand store + persist; 70 vitest green)
 
-Progress: [██░░░░░░░░] 25%
+Progress: [████░░░░░░] 37.5%
 
 ## Performance Metrics
 
