@@ -9,7 +9,10 @@ export function parseFipeValor(valor: string): number {
   if (typeof valor !== "string" || valor.length === 0) {
     throw new Error(`Invalid FIPE value: ${JSON.stringify(valor)}`);
   }
-  const clean = valor.replace(/R\$\s*/g, "").replace(/\./g, "").replace(",", ".");
+  const clean = valor
+    .replace(/R\$\s*/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
   const parsed = Number.parseFloat(clean);
   if (!Number.isFinite(parsed)) {
     throw new Error(`Invalid FIPE value: ${JSON.stringify(valor)}`);

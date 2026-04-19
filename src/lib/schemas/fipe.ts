@@ -10,9 +10,7 @@ export const modelosResponseSchema = z.object({
   anos: z.array(z.object({ codigo: z.string(), nome: z.string() })),
 });
 
-export const anosResponseSchema = z.array(
-  z.object({ codigo: z.string(), nome: z.string() }),
-);
+export const anosResponseSchema = z.array(z.object({ codigo: z.string(), nome: z.string() }));
 
 export const valorResponseSchema = z.object({
   Valor: z.string(),
