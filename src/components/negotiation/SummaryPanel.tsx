@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { renderMessageContent, useNegotiationStore } from "@/lib/stores/negotiation";
 import { Lightbulb } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { ChatView } from "./ChatView";
 
@@ -40,14 +40,21 @@ function pctColor(pct: number): string {
 
 export function SummaryPanel() {
   const [showTranscript, setShowTranscript] = useState(false);
-  // 3 slices (one is a derived selector call) → useShallow (Pattern B).
-  const { session, args, newNegotiation } = useNegotiationStore(
+  // Split: primitive + action via useShallow; derived args computed separately.
+  // Calling a method that allocates (`getArgumentsUsed`) inside the selector
+  // returns a new array each run → useShallow never equals → infinite re-render
+  // loop (React error #185). Compute derived data outside the selector via useMemo.
+  const { session, newNegotiation } = useNegotiationStore(
     useShallow((st) => ({
       session: st.currentSession,
-      args: st.getArgumentsUsed(),
       newNegotiation: st.newNegotiation,
     })),
   );
+  // Depend on `session` so recomputation happens on every messages mutation.
+  // `getState()` is intentional — calling the derived method inside the selector
+  // would return a fresh array on every evaluation and infinite-loop useShallow.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: session drives recompute even though the callback uses getState()
+  const args = useMemo(() => useNegotiationStore.getState().getArgumentsUsed(), [session]);
 
   if (!session) return null;
   if (showTranscript) {
