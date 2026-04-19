@@ -60,8 +60,10 @@ export function AdListingForm({ disabled, onReady }: Props) {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: fipeLookup.lookup is stable (useCallback [])
   useEffect(() => {
-    if (marca && modelo && ano && !currentSession?.fipe) {
-      fipeLookup.lookup({ marca, modelo, ano: Number(ano) });
+    const anoNum = Number(ano);
+    // Only fire once ano is a plausible year — avoids 400s while typing "2"/"20"/"202".
+    if (marca && modelo && anoNum >= 1900 && anoNum <= 2100 && !currentSession?.fipe) {
+      fipeLookup.lookup({ marca, modelo, ano: anoNum });
     }
   }, [marca, modelo, ano, currentSession?.fipe]);
 

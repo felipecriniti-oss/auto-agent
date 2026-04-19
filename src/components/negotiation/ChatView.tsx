@@ -88,7 +88,11 @@ export function ChatView({ readonly, onKillSwitch }: Props) {
           if (code === "disabled") onKillSwitch?.();
           else if (code === "rate_limited")
             toast.error("Muitas negociações recentes. Tente novamente em breve.");
-          else toast.error("Erro na negociação. Tente novamente.");
+          else if (code === "upstream_failed")
+            toast.error("Falha no provedor LLM. Verifique ANTHROPIC_API_KEY e ANTHROPIC_MODEL.");
+          else if (code.startsWith("http_"))
+            toast.error(`Erro do servidor (${code.replace("http_", "")}). Veja Console/Network.`);
+          else toast.error(`Erro na negociação (${code}). Tente novamente.`);
         },
       },
       ctl.signal,

@@ -39,5 +39,5 @@ jobs:
         env:
           # Build does not need live secrets — dummy values avoid gating.
           ANTHROPIC_API_KEY: sk-ant-ci-dummy
-          ANTHROPIC_MODEL: claude-sonnet-4-5
+          ANTHROPIC_MODEL: claude-sonnet-4-6
           NEGOTIATION_ENABLED: "true"

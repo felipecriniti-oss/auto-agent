@@ -8,7 +8,9 @@ export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 const MAX_TOKENS = 1024;
-const DEFAULT_MODEL = "claude-sonnet-4-5";
+// Project brief locks the LLM to Claude Sonnet 4.6. Override via ANTHROPIC_MODEL
+// env var only when pinning a specific snapshot.
+const DEFAULT_MODEL = "claude-sonnet-4-6";
 
 function extractIp(request: Request): string {
   const h = request.headers.get("x-forwarded-for");
@@ -92,7 +94,18 @@ export async function POST(request: Request): Promise<Response> {
         controller.enqueue(encodeFrame({ type: "done" }));
         controller.close();
       } catch (err) {
-        console.warn("Anthropic stream error:", String(err));
+        // Structured server log for Vercel Function logs. Never leak upstream
+        // error text to the client (T-06-04) — only log it here.
+        const e = err as { status?: number; name?: string; message?: string };
+        console.warn(
+          JSON.stringify({
+            scope: "negotiate_stream.upstream",
+            model,
+            status: e?.status ?? null,
+            name: e?.name ?? null,
+            message: e?.message ?? String(err),
+          }),
+        );
         try {
           controller.enqueue(encodeFrame({ type: "error", message: "upstream_failed" }));
           controller.close();

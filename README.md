@@ -23,7 +23,7 @@ Ferramenta técnica de validação — chat manual funcional (Fase 1).
 1. **Importar projeto:** https://vercel.com/new → importe este repositório. Aceitar os defaults do Next 15.
 2. **Configurar env vars** (Settings → Environment Variables, para `Production` e `Preview`):
    - `ANTHROPIC_API_KEY` — copiar de https://console.anthropic.com/settings/keys
-   - `ANTHROPIC_MODEL` — `claude-sonnet-4-5-20250929`
+   - `ANTHROPIC_MODEL` — `claude-sonnet-4-6` (per PROJECT-BRIEF §10 LLM lock)
    - `NEGOTIATION_ENABLED` — `true` (mudar para `false` para desligar o endpoint sem redeploy)
 3. **Deploy:** push na `main` → Production; abrir PR → Preview (automático via git integration).
 
