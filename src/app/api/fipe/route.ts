@@ -1,0 +1,144 @@
+import {
+  anosResponseSchema,
+  marcaSchema,
+  modelosResponseSchema,
+  valorResponseSchema,
+} from "@/lib/schemas/fipe";
+import { listingSchema } from "@/lib/schemas/listing";
+import { checkRateLimit } from "@/lib/server/rate-limit";
+import { parseFipeValor } from "@/lib/utils/fipe";
+import { z } from "zod";
+
+export const runtime = "edge";
+export const dynamic = "force-dynamic";
+
+const fipeRequestSchema = listingSchema.pick({ marca: true, modelo: true, ano: true });
+
+const PARALLELUM_BASE = "https://parallelum.com.br/fipe/api/v1/carros";
+const UPSTREAM_TIMEOUT_MS = 10_000;
+
+type ErrorBody = { error: string; retryAfter?: number };
+type SuccessBody = { fipe: number; marca: string; modelo: string; ano: number };
+
+function genericError(status: number, body: ErrorBody): Response {
+  return Response.json(body, {
+    status,
+    headers: body.retryAfter !== undefined ? { "Retry-After": String(body.retryAfter) } : undefined,
+  });
+}
+
+function extractIp(request: Request): string {
+  const h = request.headers.get("x-forwarded-for");
+  return h?.split(",")[0]?.trim() || "unknown";
+}
+
+const UPSTREAM_FAIL = { __upstreamFailed: true } as const;
+type UpstreamFail = typeof UPSTREAM_FAIL;
+
+async function fetchJson<T>(
+  url: string,
+  schema: z.ZodType<T>,
+  signal: AbortSignal,
+): Promise<T | UpstreamFail> {
+  try {
+    const res = await fetch(url, { signal, headers: { Accept: "application/json" } });
+    if (!res.ok) {
+      return UPSTREAM_FAIL;
+    }
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.includes("application/json")) {
+      return UPSTREAM_FAIL;
+    }
+    const data = await res.json();
+    const parsed = schema.safeParse(data);
+    if (!parsed.success) {
+      console.warn("Parallelum schema mismatch:", url, parsed.error.message);
+      return UPSTREAM_FAIL;
+    }
+    return parsed.data;
+  } catch (err) {
+    console.warn("Parallelum fetch failed:", url, String(err));
+    return UPSTREAM_FAIL;
+  }
+}
+
+function isUpstreamFail<T>(v: T | UpstreamFail): v is UpstreamFail {
+  return typeof v === "object" && v !== null && "__upstreamFailed" in v;
+}
+
+function fuzzyMatch<T extends { nome: string }>(items: T[], needle: string): T | null {
+  const q = needle.trim().toLowerCase();
+  if (q.length === 0) return null;
+  const hits = items.filter((x) => x.nome.toLowerCase().includes(q));
+  if (hits.length === 0) return null;
+  return hits.reduce((best, curr) => (curr.nome.length < best.nome.length ? curr : best));
+}
+
+export async function POST(request: Request): Promise<Response> {
+  const ip = extractIp(request);
+  const rl = checkRateLimit(ip, { bucket: "fipe", max: 20, windowMs: 60_000 });
+  if (!rl.ok) {
+    return genericError(429, { error: "rate_limited", retryAfter: rl.retryAfter });
+  }
+
+  let body: z.infer<typeof fipeRequestSchema>;
+  try {
+    const raw = await request.json();
+    const parsed = fipeRequestSchema.safeParse(raw);
+    if (!parsed.success) {
+      return genericError(400, { error: "invalid_body" });
+    }
+    body = parsed.data;
+  } catch {
+    return genericError(400, { error: "invalid_body" });
+  }
+
+  const signal = AbortSignal.timeout(UPSTREAM_TIMEOUT_MS);
+
+  const marcasRes = await fetchJson(`${PARALLELUM_BASE}/marcas`, z.array(marcaSchema), signal);
+  if (isUpstreamFail(marcasRes)) return genericError(502, { error: "upstream_failed" });
+  const marcaMatch = fuzzyMatch(marcasRes, body.marca);
+  if (!marcaMatch) return genericError(404, { error: "not_found" });
+
+  const modelosRes = await fetchJson(
+    `${PARALLELUM_BASE}/marcas/${encodeURIComponent(marcaMatch.codigo)}/modelos`,
+    modelosResponseSchema,
+    signal,
+  );
+  if (isUpstreamFail(modelosRes)) return genericError(502, { error: "upstream_failed" });
+  const modeloMatch = fuzzyMatch(modelosRes.modelos, body.modelo);
+  if (!modeloMatch) return genericError(404, { error: "not_found" });
+
+  const anosRes = await fetchJson(
+    `${PARALLELUM_BASE}/marcas/${encodeURIComponent(marcaMatch.codigo)}/modelos/${encodeURIComponent(String(modeloMatch.codigo))}/anos`,
+    anosResponseSchema,
+    signal,
+  );
+  if (isUpstreamFail(anosRes)) return genericError(502, { error: "upstream_failed" });
+  const yearStr = String(body.ano);
+  const anoMatches = anosRes.filter((a) => a.codigo.startsWith(`${yearStr}-`));
+  if (anoMatches.length === 0) return genericError(404, { error: "not_found" });
+  const anoMatch = anoMatches.find((a) => a.codigo.endsWith("-1")) ?? anoMatches[0];
+
+  const valorRes = await fetchJson(
+    `${PARALLELUM_BASE}/marcas/${encodeURIComponent(marcaMatch.codigo)}/modelos/${encodeURIComponent(String(modeloMatch.codigo))}/anos/${encodeURIComponent(anoMatch.codigo)}`,
+    valorResponseSchema,
+    signal,
+  );
+  if (isUpstreamFail(valorRes)) return genericError(502, { error: "upstream_failed" });
+
+  let fipe: number;
+  try {
+    fipe = parseFipeValor(valorRes.Valor);
+  } catch {
+    return genericError(502, { error: "upstream_failed" });
+  }
+
+  const payload: SuccessBody = {
+    fipe,
+    marca: valorRes.Marca,
+    modelo: valorRes.Modelo,
+    ano: valorRes.AnoModelo,
+  };
+  return Response.json(payload, { status: 200 });
+}
