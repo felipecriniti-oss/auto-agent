@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install (frozen)
+        run: pnpm install --frozen-lockfile
+
+      - name: Biome check
+        run: pnpm biome check src
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Vitest
+        run: pnpm vitest run
+
+      - name: Next build
+        run: pnpm build
+        env:
+          # Build does not need live secrets — dummy values avoid gating.
+          ANTHROPIC_API_KEY: sk-ant-ci-dummy
+          ANTHROPIC_MODEL: claude-sonnet-4-5
+          NEGOTIATION_ENABLED: "true"
