@@ -37,7 +37,7 @@ Plans:
 - [x] 01-04-PLAN.md — /api/fipe route (Parallelum cascade + Zod + fuzzy match + rate limit) + shared rate-limit module [FIPE-01, FIPE-02, INFRA-03]
 - [x] 01-05-PLAN.md — System prompt v1 builder (verbatim + injection defense + <arg> tags) + kill-switch helper [NEG-03, INFRA-03]
 - [x] 01-06-PLAN.md — /api/negotiate SSE route handler (Anthropic stream + rate limit + kill switch + AbortController) [NEG-03, INFRA-03]
-- [ ] 01-07-PLAN.md — UI components (AdListingForm, ChatView, MessageBubble, TypingIndicator, ContextPanel, SummaryPanel, NegotiationStatusBar, KillSwitchBanner, page wiring) [NEG-01, NEG-02, NEG-04, NEG-05, FIPE-02, STATE-02]
+- [x] 01-07-PLAN.md — UI components (AdListingForm, ChatView, MessageBubble, TypingIndicator, ContextPanel, SummaryPanel, NegotiationStatusBar, KillSwitchBanner, page wiring) [NEG-01, NEG-02, NEG-04, NEG-05, FIPE-02, STATE-02]
 - [ ] 01-08-PLAN.md — CI workflow + Vercel deploy + human smoke test [INFRA-02]
 **UI hint**: yes
 

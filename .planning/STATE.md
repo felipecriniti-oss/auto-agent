@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-04-18)
 ## Current Position
 
 Phase: 1 of 4 (Chat Manual Funcional)
-Plan: 6 of 8 in current phase (Waves 0, 1, 2, 3 done)
-Status: Wave 4 ready — Plan 01-07 (full UI, 17 files) pending
-Last activity: 2026-04-19 — Plan 01-06 complete (SSE Edge route + 13 integration tests; 132 vitest green)
+Plan: 7 of 8 in current phase (Waves 0, 1, 2, 3, 4 done)
+Status: Wave 5 pending — Plan 01-08 (Vercel deploy + CI + smoke test) requires user setup
+Last activity: 2026-04-19 — Plan 01-07 complete (full UI, 17 files, 32 new tests; 164 vitest green)
 
-Progress: [████████░░] 75%
+Progress: [█████████░] 87%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Total tests: 132 across 11 files
+- Total plans completed: 7
+- Total tests: 164 across 16 files
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1 (in progress) | 6/8 | ~3h | ~22 min |
+| 1 (in progress) | 7/8 | ~3h 9m | ~27 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (~8min), 01-03 (~6min), 01-04 (~5min), 01-05 (~4min), 01-06 (~6min)
-- Trend: Stable ~5min/plan in inline mode for medium plans. Plan 01-07 (UI, 17 files) will be 5–10x bigger.
+- Last 5 plans: 01-03 (~6min), 01-04 (~5min), 01-05 (~4min), 01-06 (~6min), 01-07 (~9min parallel worktree)
+- Trend: Worktree subagent handled the 2115-line UI plan in ~9min with 32 new tests, all quality gates green (biome + typecheck + build + vitest).
 
 *Updated after each plan completion*
 
@@ -49,13 +49,12 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Wave 4: Plan 01-07 (UI — 17 files, the biggest plan in phase)
 - Wave 5 (Plan 01-08) requires user setup (Vercel env vars) — pause before execution
+- Manual visual UAT deferred to 01-08 deploy smoke test: D-05 typing-indicator phases, D-06 pin-on-scroll-up, D-11 AbortController drop-partial, live Felipe demo
 
 ### Blockers/Concerns
 
-- Plan 01-07 is 2115 lines (2.5x bigger than 01-02). Strongly recommend a fresh session for it.
-- Inline mode is working well for medium plans; should still hold for the UI but token budget will be tight.
+- Plan 01-08 is `autonomous: false` — needs Vercel account wiring (ANTHROPIC_API_KEY, ANTHROPIC_MODEL, NEGOTIATION_ENABLED as env vars in Production + Preview) before execution.
 - ANTHROPIC_API_KEY in `.env.local` is required to actually exercise the negotiate route at dev time (route returns 500 'misconfigured' without it).
 
 ## Deferred Items
@@ -69,5 +68,5 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-04-19
-Stopped at: Wave 3 complete (Plan 01-06 SSE route done). Wave 4 (Plan 01-07 UI) pending. 132 vitest tests green; backend 100% complete.
+Stopped at: Wave 4 complete (Plan 01-07 UI done via worktree subagent — 17 files, 32 new tests). Wave 5 (Plan 01-08 Vercel deploy + CI) pending — autonomous: false, needs user setup. 164 vitest green, build/typecheck/biome clean. Phase 1 is functionally complete except deploy.
 Resume file: None
