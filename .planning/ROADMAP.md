@@ -29,7 +29,16 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Usuário pode encerrar a negociação e ver resumo com rodadas percorridas, preço inicial/final, percentual de redução vs preço pedido e vs FIPE, e argumentos usados
   4. Histórico da sessão persiste entre reloads do browser (localStorage), sem banco de dados ou autenticação
   5. A URL pública na Vercel carrega o app em menos de 2 segundos
-**Plans**: TBD
+**Plans**: 8 plans
+Plans:
+- [ ] 01-01-PLAN.md — Project scaffold (Next 15 + Tailwind v4 + shadcn New York + Biome + pnpm + Vitest + deny-list) [INFRA-01]
+- [ ] 01-02-PLAN.md — Zod schemas (listing, fipe cascade, negotiate) + parseFipeValor + Session/Message types [NEG-01, FIPE-01, NEG-02]
+- [ ] 01-03-PLAN.md — Zustand store with persist middleware + derived prices + arg extraction [STATE-01, STATE-02, NEG-02, NEG-05, FIPE-02]
+- [ ] 01-04-PLAN.md — /api/fipe route (Parallelum cascade + Zod + fuzzy match + rate limit) + shared rate-limit module [FIPE-01, FIPE-02, INFRA-03]
+- [ ] 01-05-PLAN.md — System prompt v1 builder (verbatim + injection defense + <arg> tags) + kill-switch helper [NEG-03, INFRA-03]
+- [ ] 01-06-PLAN.md — /api/negotiate SSE route handler (Anthropic stream + rate limit + kill switch + AbortController) [NEG-03, INFRA-03]
+- [ ] 01-07-PLAN.md — UI components (AdListingForm, ChatView, MessageBubble, TypingIndicator, ContextPanel, SummaryPanel, NegotiationStatusBar, KillSwitchBanner, page wiring) [NEG-01, NEG-02, NEG-04, NEG-05, FIPE-02, STATE-02]
+- [ ] 01-08-PLAN.md — CI workflow + Vercel deploy + human smoke test [INFRA-02]
 **UI hint**: yes
 
 ### Phase 2: Inteligência do Agente
@@ -76,11 +85,11 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Chat Manual Funcional | 0/TBD | Not started | - |
+| 1. Chat Manual Funcional | 0/8 | Planned | - |
 | 2. Inteligência do Agente | 0/TBD | Not started | - |
 | 3. PF Simulado e Batch | 0/TBD | Not started | - |
 | 4. Análise, Export e A/B | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-04-18*
-*Last updated: 2026-04-18 after user review (added INFRA-03, INTEL-06, BATCH-04)*
+*Last updated: 2026-04-18 after Phase 1 planning (8 plans across 6 waves)*
