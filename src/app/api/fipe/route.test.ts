@@ -122,6 +122,83 @@ describe("POST /api/fipe — not found", () => {
     const res = await POST(makeRequest(validBody));
     expect(res.status).toBe(404);
   });
+
+  it("walks modelo candidates when the shortest one doesn't cover the ano", async () => {
+    // Two Gol variants — shortest has old anos only, second has 2020.
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse([{ codigo: "59", nome: "VW - VolksWagen" }]))
+        .mockResolvedValueOnce(
+          jsonResponse({
+            modelos: [
+              { codigo: 100, nome: "Gol 1.8 Mi" },
+              { codigo: 200, nome: "Gol 1.6 MSI Flex 8V 5p" },
+            ],
+            anos: [],
+          }),
+        )
+        // shortest modelo's anos — no 2020
+        .mockResolvedValueOnce(jsonResponse([{ codigo: "2003-1", nome: "2003 Gasolina" }]))
+        // next modelo's anos — has 2020
+        .mockResolvedValueOnce(jsonResponse([{ codigo: "2020-1", nome: "2020 Flex" }]))
+        .mockResolvedValueOnce(
+          jsonResponse({
+            Valor: "R$ 48.000,00",
+            Marca: "VW - VolksWagen",
+            Modelo: "Gol 1.6 MSI Flex 8V 5p",
+            AnoModelo: 2020,
+            Combustivel: "Flex",
+            CodigoFipe: "005340-6",
+            MesReferencia: "abril de 2026",
+            TipoVeiculo: 1,
+            SiglaCombustivel: "F",
+          }),
+        ),
+    );
+    const res = await POST(makeRequest({ marca: "Volkswagen", modelo: "Gol", ano: 2020 }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toMatchObject({ fipe: 48000, ano: 2020, modelo: "Gol 1.6 MSI Flex 8V 5p" });
+  });
+
+  it("prefers word-boundary matches over substring (Gol does not swallow Golf)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse([{ codigo: "59", nome: "VW" }]))
+        .mockResolvedValueOnce(
+          jsonResponse({
+            modelos: [
+              // "Golf" would win on length if substring matching were used
+              { codigo: 10, nome: "Golf GTi" },
+              { codigo: 20, nome: "Gol 1.6 MSI 5p" },
+            ],
+            anos: [],
+          }),
+        )
+        .mockResolvedValueOnce(jsonResponse([{ codigo: "2020-1", nome: "2020 Flex" }]))
+        .mockResolvedValueOnce(
+          jsonResponse({
+            Valor: "R$ 48.000,00",
+            Marca: "VW",
+            Modelo: "Gol 1.6 MSI 5p",
+            AnoModelo: 2020,
+            Combustivel: "Flex",
+            CodigoFipe: "005340-6",
+            MesReferencia: "abril de 2026",
+            TipoVeiculo: 1,
+            SiglaCombustivel: "F",
+          }),
+        ),
+    );
+    const res = await POST(makeRequest({ marca: "VW", modelo: "Gol", ano: 2020 }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.modelo).toBe("Gol 1.6 MSI 5p");
+  });
 });
 
 describe("POST /api/fipe — upstream failures (T-04-04, T-04-05)", () => {
@@ -170,7 +247,10 @@ describe("POST /api/fipe — upstream failures (T-04-04, T-04-05)", () => {
 
 describe("POST /api/fipe — rate limit (INFRA-03 fipe bucket, T-04-03)", () => {
   it("allows 20 requests in one window", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse([{ codigo: "59", nome: "VW" }])));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(async () => jsonResponse([{ codigo: "59", nome: "VW" }])),
+    );
     for (let i = 0; i < 20; i++) {
       const res = await POST(makeRequest({ ...validBody, marca: "Tucker" }, "9.9.9.9"));
       expect([200, 404, 502]).toContain(res.status);
@@ -178,7 +258,10 @@ describe("POST /api/fipe — rate limit (INFRA-03 fipe bucket, T-04-03)", () => 
   });
 
   it("blocks the 21st request with 429 + Retry-After", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse([])));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(async () => jsonResponse([])),
+    );
     for (let i = 0; i < 20; i++) {
       await POST(makeRequest(validBody, "8.8.8.8"));
     }

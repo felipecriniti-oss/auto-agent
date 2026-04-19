@@ -40,7 +40,11 @@ beforeEach(() => {
   useNegotiationStore.setState({ currentSession: null, history: [] });
 });
 afterEach(() => {
-  useNegotiationStore.setState({ currentSession: null, history: [] });
+  // Reset inside act() — cleanup order runs this before RTL unmount, so the
+  // component is still subscribed when state changes.
+  act(() => {
+    useNegotiationStore.setState({ currentSession: null, history: [] });
+  });
 });
 
 describe("computeSummaryPrices", () => {

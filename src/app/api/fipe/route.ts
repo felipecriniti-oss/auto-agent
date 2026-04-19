@@ -66,12 +66,28 @@ function isUpstreamFail<T>(v: T | UpstreamFail): v is UpstreamFail {
   return typeof v === "object" && v !== null && "__upstreamFailed" in v;
 }
 
-function fuzzyMatch<T extends { nome: string }>(items: T[], needle: string): T | null {
+const REGEX_ESCAPE = /[.*+?^${}()|[\]\\]/g;
+
+// Prefer word-boundary token matches (so "Gol" doesn't swallow "Golf").
+// Falls back to raw substring match if no boundary candidate survives,
+// preserving tolerance for odd inputs like "gol1.6".
+function fuzzyMatchAll<T extends { nome: string }>(items: T[], needle: string): T[] {
   const q = needle.trim().toLowerCase();
-  if (q.length === 0) return null;
-  const hits = items.filter((x) => x.nome.toLowerCase().includes(q));
-  if (hits.length === 0) return null;
-  return hits.reduce((best, curr) => (curr.nome.length < best.nome.length ? curr : best));
+  if (q.length === 0) return [];
+  const tokens = q.split(/\s+/).filter(Boolean);
+  const regexes = tokens.map((t) => new RegExp(`\\b${t.replace(REGEX_ESCAPE, "\\$&")}`));
+  const boundaryHits = items.filter((x) => {
+    const name = x.nome.toLowerCase();
+    return regexes.every((re) => re.test(name));
+  });
+  const pool =
+    boundaryHits.length > 0 ? boundaryHits : items.filter((x) => x.nome.toLowerCase().includes(q));
+  return [...pool].sort((a, b) => a.nome.length - b.nome.length);
+}
+
+function fuzzyMatch<T extends { nome: string }>(items: T[], needle: string): T | null {
+  const hits = fuzzyMatchAll(items, needle);
+  return hits.length > 0 ? hits[0] : null;
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -106,19 +122,32 @@ export async function POST(request: Request): Promise<Response> {
     signal,
   );
   if (isUpstreamFail(modelosRes)) return genericError(502, { error: "upstream_failed" });
-  const modeloMatch = fuzzyMatch(modelosRes.modelos, body.modelo);
-  if (!modeloMatch) return genericError(404, { error: "not_found" });
+  const modeloCandidates = fuzzyMatchAll(modelosRes.modelos, body.modelo);
+  if (modeloCandidates.length === 0) return genericError(404, { error: "not_found" });
 
-  const anosRes = await fetchJson(
-    `${PARALLELUM_BASE}/marcas/${encodeURIComponent(marcaMatch.codigo)}/modelos/${encodeURIComponent(String(modeloMatch.codigo))}/anos`,
-    anosResponseSchema,
-    signal,
-  );
-  if (isUpstreamFail(anosRes)) return genericError(502, { error: "upstream_failed" });
+  // Picking only the shortest name often maps to a trim that doesn't cover the
+  // requested ano. Walk candidates (shortest first) until one has matching anos.
   const yearStr = String(body.ano);
-  const anoMatches = anosRes.filter((a) => a.codigo.startsWith(`${yearStr}-`));
-  if (anoMatches.length === 0) return genericError(404, { error: "not_found" });
-  const anoMatch = anoMatches.find((a) => a.codigo.endsWith("-1")) ?? anoMatches[0];
+  const MAX_MODELO_CANDIDATES = 12;
+  let modeloMatch: (typeof modeloCandidates)[number] | null = null;
+  let anoMatch: { codigo: string; nome: string } | null = null;
+
+  for (const candidate of modeloCandidates.slice(0, MAX_MODELO_CANDIDATES)) {
+    const anosRes = await fetchJson(
+      `${PARALLELUM_BASE}/marcas/${encodeURIComponent(marcaMatch.codigo)}/modelos/${encodeURIComponent(String(candidate.codigo))}/anos`,
+      anosResponseSchema,
+      signal,
+    );
+    if (isUpstreamFail(anosRes)) return genericError(502, { error: "upstream_failed" });
+    const anoMatches = anosRes.filter((a) => a.codigo.startsWith(`${yearStr}-`));
+    if (anoMatches.length > 0) {
+      modeloMatch = candidate;
+      anoMatch = anoMatches.find((a) => a.codigo.endsWith("-1")) ?? anoMatches[0];
+      break;
+    }
+  }
+
+  if (!modeloMatch || !anoMatch) return genericError(404, { error: "not_found" });
 
   const valorRes = await fetchJson(
     `${PARALLELUM_BASE}/marcas/${encodeURIComponent(marcaMatch.codigo)}/modelos/${encodeURIComponent(String(modeloMatch.codigo))}/anos/${encodeURIComponent(anoMatch.codigo)}`,
