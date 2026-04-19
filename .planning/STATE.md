@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-04-18)
 ## Current Position
 
 Phase: 1 of 4 (Chat Manual Funcional)
-Plan: 0 of 8 in current phase
-Status: Ready to execute
-Last activity: 2026-04-19 — Phase 1 plans verified (8 plans, 6 waves, 12/12 REQ-IDs covered)
+Plan: 1 of 8 in current phase (Wave 0 done)
+Status: Wave 1 ready to execute (Plan 01-02 — Zod schemas)
+Last activity: 2026-04-19 — Plan 01-01 complete (Next.js 15 + Tailwind v4 + shadcn + Biome + Vitest scaffold green)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 12.5%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: ~2h (orchestrator + agent + inline salvage)
+- Total execution time: ~2h
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 1 (in progress) | 1/8 | ~2h | ~2h |
 
 **Recent Trend:**
-- Last 5 plans: -
-- Trend: -
+- Last 5 plans: 01-01 (~2h, 5 deviations auto-fixed)
+- Trend: First plan recovered from agent suspension via inline salvage; downstream plans expected to be smaller/faster
 
 *Updated after each plan completion*
 
@@ -50,11 +50,12 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+- Wave 1: execute Plan 01-02 (Zod schemas + types)
+- Wave 5 (Plan 01-08) requires user setup (Vercel env vars) — pause before execution
 
 ### Blockers/Concerns
 
-None yet.
+- Usage limit hit during Wave 0 parallel agent run; orchestrator switched to inline mode for the rest of the phase to control token burn.
 
 ## Deferred Items
 
@@ -67,5 +68,5 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-04-19
-Stopped at: Phase 1 plans verified (VERIFICATION PASSED iter 2). Ready to run /gsd-execute-phase 1.
+Stopped at: Wave 0 complete (Plan 01-01 merged at e626153). Wave 1 (Plan 01-02) pending.
 Resume file: None

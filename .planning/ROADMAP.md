@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. A URL pública na Vercel carrega o app em menos de 2 segundos
 **Plans**: 8 plans
 Plans:
-- [ ] 01-01-PLAN.md — Project scaffold (Next 15 + Tailwind v4 + shadcn New York + Biome + pnpm + Vitest + deny-list) [INFRA-01]
+- [x] 01-01-PLAN.md — Project scaffold (Next 15 + Tailwind v4 + shadcn New York + Biome + pnpm + Vitest + deny-list) [INFRA-01]
 - [ ] 01-02-PLAN.md — Zod schemas (listing, fipe cascade, negotiate) + parseFipeValor + Session/Message types [NEG-01, FIPE-01, NEG-02]
 - [ ] 01-03-PLAN.md — Zustand store with persist middleware + derived prices + arg extraction [STATE-01, STATE-02, NEG-02, NEG-05, FIPE-02]
 - [ ] 01-04-PLAN.md — /api/fipe route (Parallelum cascade + Zod + fuzzy match + rate limit) + shared rate-limit module [FIPE-01, FIPE-02, INFRA-03]
