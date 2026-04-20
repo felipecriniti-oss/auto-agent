@@ -1,16 +1,13 @@
 import { buildSystemPrompt } from "@/lib/prompts/system-v1";
 import { negotiateRequestSchema } from "@/lib/schemas/negotiate";
 import { isNegotiationEnabled } from "@/lib/server/kill-switch";
+import { isProviderConfigured, resolveProvider, streamLLM } from "@/lib/server/llm";
 import { checkRateLimit } from "@/lib/server/rate-limit";
-import Anthropic from "@anthropic-ai/sdk";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 const MAX_TOKENS = 1024;
-// Project brief locks the LLM to Claude Sonnet 4.6. Override via ANTHROPIC_MODEL
-// env var only when pinning a specific snapshot.
-const DEFAULT_MODEL = "claude-sonnet-4-6";
 
 function extractIp(request: Request): string {
   const h = request.headers.get("x-forwarded-for");
@@ -50,16 +47,15 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "invalid_body" }, { status: 400 });
   }
 
-  const abortCtl = new AbortController();
-  request.signal.addEventListener("abort", () => abortCtl.abort());
-
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    console.warn("ANTHROPIC_API_KEY missing");
+  const provider = resolveProvider();
+  if (!isProviderConfigured(provider)) {
+    console.warn(`${provider} API key missing`);
     return Response.json({ error: "misconfigured" }, { status: 500 });
   }
 
-  const client = new Anthropic({ apiKey });
+  const abortCtl = new AbortController();
+  request.signal.addEventListener("abort", () => abortCtl.abort());
+
   const systemPrompt = buildSystemPrompt(
     body.listing,
     body.fipe,
@@ -67,30 +63,23 @@ export async function POST(request: Request): Promise<Response> {
     body.walkAwayPrice,
     body.maxRounds,
   );
-  const model = process.env.ANTHROPIC_MODEL ?? DEFAULT_MODEL;
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        const messageStream = client.messages.stream(
-          {
-            model,
-            max_tokens: MAX_TOKENS,
-            system: systemPrompt,
-            messages: body.messages,
+        await streamLLM(provider, {
+          systemPrompt,
+          messages: body.messages,
+          maxTokens: MAX_TOKENS,
+          signal: abortCtl.signal,
+          onText: (chunk: string) => {
+            try {
+              controller.enqueue(encodeFrame({ type: "chunk", text: chunk }));
+            } catch {
+              // controller already closed — ignore
+            }
           },
-          { signal: abortCtl.signal },
-        );
-
-        messageStream.on("text", (textChunk: string) => {
-          try {
-            controller.enqueue(encodeFrame({ type: "chunk", text: textChunk }));
-          } catch {
-            // controller already closed — ignore
-          }
         });
-
-        await messageStream.finalMessage();
         controller.enqueue(encodeFrame({ type: "done" }));
         controller.close();
       } catch (err) {
@@ -100,7 +89,7 @@ export async function POST(request: Request): Promise<Response> {
         console.warn(
           JSON.stringify({
             scope: "negotiate_stream.upstream",
-            model,
+            provider,
             status: e?.status ?? null,
             name: e?.name ?? null,
             message: e?.message ?? String(err),
