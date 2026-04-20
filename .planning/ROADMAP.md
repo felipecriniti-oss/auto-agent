@@ -51,7 +51,15 @@ Plans:
   3. Usuário pode editar targetDiscount, maxRounds, tone e initialAnchorStrategy no painel de configuração da UI, sem reload, e os parâmetros persistem em localStorage
   4. O componente AgentThinking pode ser ativado via toggle e exibe o rationale do agente durante a negociação
   5. Benchmark manual de N negociações gera scorecard com redução média %, rodadas médias e qualidade subjetiva 1–5 — resultado positivo é gate de conclusão da fase
-**Plans**: TBD
+**Plans**: 7 plans
+Plans:
+- [ ] 02-00-PLAN.md � Wave 0 scaffolds: shadcn components + 13 test stubs [INTEL-01..06]
+- [ ] 02-01-PLAN.md � Wave 1 foundations: types + schemas + motivation + comparables + tone + few-shot [INTEL-01..04]
+- [ ] 02-02-PLAN.md � Wave 2 composition: system-v2 prompt + migrations + anthropic adapter extension [INTEL-01..05]
+- [ ] 02-03-PLAN.md � Wave 3 integration: Zustand store extension + route handler promptVersion branching [INTEL-01..06]
+- [ ] 02-04-PLAN.md � Wave 4 UI: AgentConfigForm + LeftColumnPanel + AgentThinking + ContextPanel motivation [INTEL-01, INTEL-04, INTEL-05]
+- [ ] 02-05-PLAN.md � Wave 5 benchmark: /benchmark route + StarRating + Nav + layout [INTEL-06]
+- [ ] 02-06-PLAN.md � Wave 6 integration: token measurement + canonical replay + Felipe smoke test checkpoint [INTEL-01..06]
 **UI hint**: yes
 
 ### Phase 3: PF Simulado e Batch
