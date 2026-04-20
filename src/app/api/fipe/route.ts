@@ -75,7 +75,10 @@ function fuzzyMatchAll<T extends { nome: string }>(items: T[], needle: string): 
   const q = needle.trim().toLowerCase();
   if (q.length === 0) return [];
   const tokens = q.split(/\s+/).filter(Boolean);
-  const regexes = tokens.map((t) => new RegExp(`\\b${t.replace(REGEX_ESCAPE, "\\$&")}`));
+  // Boundary on BOTH sides — `\bgol` alone still matches "golf" because "gol"
+  // is a prefix of "golf" at a word start. `\bgol\b` requires a non-word char
+  // after the last token char too (space, end-of-string, punctuation).
+  const regexes = tokens.map((t) => new RegExp(`\\b${t.replace(REGEX_ESCAPE, "\\$&")}\\b`));
   const boundaryHits = items.filter((x) => {
     const name = x.nome.toLowerCase();
     return regexes.every((re) => re.test(name));
@@ -126,22 +129,36 @@ export async function POST(request: Request): Promise<Response> {
   if (modeloCandidates.length === 0) return genericError(404, { error: "not_found" });
 
   // Picking only the shortest name often maps to a trim that doesn't cover the
-  // requested ano. Walk candidates (shortest first) until one has matching anos.
+  // requested ano. Probe candidates in parallel (preserving sort order) and
+  // pick the first-sorted one whose /anos covers the requested year. Parallel
+  // fan-out keeps latency ~1 upstream RTT even when scanning many trims.
+  //
+  // The cap must be generous: popular marca+modelo pairs (e.g. Volkswagen + Gol)
+  // produce 100+ boundary hits in Parallelum, and the shortest names skew toward
+  // 1990s/2000s trims that don't cover recent anos. A low cap (20) silently
+  // returned 404 for common queries like "Gol 2015". 120 is a safe band that
+  // covers every marca's realistic modelo set without saturating upstream.
   const yearStr = String(body.ano);
-  const MAX_MODELO_CANDIDATES = 12;
+  const MAX_MODELO_CANDIDATES = 120;
+  const probeList = modeloCandidates.slice(0, MAX_MODELO_CANDIDATES);
+  const anosResults = await Promise.all(
+    probeList.map((candidate) =>
+      fetchJson(
+        `${PARALLELUM_BASE}/marcas/${encodeURIComponent(marcaMatch.codigo)}/modelos/${encodeURIComponent(String(candidate.codigo))}/anos`,
+        anosResponseSchema,
+        signal,
+      ),
+    ),
+  );
+
   let modeloMatch: (typeof modeloCandidates)[number] | null = null;
   let anoMatch: { codigo: string; nome: string } | null = null;
-
-  for (const candidate of modeloCandidates.slice(0, MAX_MODELO_CANDIDATES)) {
-    const anosRes = await fetchJson(
-      `${PARALLELUM_BASE}/marcas/${encodeURIComponent(marcaMatch.codigo)}/modelos/${encodeURIComponent(String(candidate.codigo))}/anos`,
-      anosResponseSchema,
-      signal,
-    );
-    if (isUpstreamFail(anosRes)) return genericError(502, { error: "upstream_failed" });
+  for (let i = 0; i < probeList.length; i++) {
+    const anosRes = anosResults[i];
+    if (isUpstreamFail(anosRes)) continue; // tolerate a subset of upstream errors
     const anoMatches = anosRes.filter((a) => a.codigo.startsWith(`${yearStr}-`));
     if (anoMatches.length > 0) {
-      modeloMatch = candidate;
+      modeloMatch = probeList[i];
       anoMatch = anoMatches.find((a) => a.codigo.endsWith("-1")) ?? anoMatches[0];
       break;
     }

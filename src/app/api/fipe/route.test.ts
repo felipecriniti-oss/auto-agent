@@ -199,6 +199,61 @@ describe("POST /api/fipe — not found", () => {
     const data = await res.json();
     expect(data.modelo).toBe("Gol 1.6 MSI 5p");
   });
+
+  it("probes beyond the old 20-cap so a year match far down the sort still resolves (Bug A fix)", async () => {
+    // 40 ancient-years Gol variants (all pre-2010) followed by one that has 2015.
+    // Pre-fix (cap=20) this returned 404; post-fix (cap=120) it resolves.
+    const modelos: Array<{ codigo: number; nome: string }> = [];
+    for (let i = 0; i < 40; i++) {
+      // Pad names with index-specific suffix so sort-by-length is deterministic.
+      modelos.push({ codigo: 1000 + i, nome: `Gol ${i.toString().padStart(4, "x")}` });
+    }
+    // The 2015-covering variant is intentionally longer → sorted last.
+    const HIT_CODIGO = 9999;
+    modelos.push({ codigo: HIT_CODIGO, nome: "Gol City Trend 1.0 Mi Total Flex 8V 2p" });
+
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (url.endsWith("/marcas")) {
+        return jsonResponse([{ codigo: "59", nome: "VW - VolksWagen" }]);
+      }
+      if (url.endsWith("/modelos")) {
+        return jsonResponse({ modelos, anos: [] });
+      }
+      // /anos endpoint — return 2015 only for HIT_CODIGO, else pre-2010.
+      const match = url.match(/\/modelos\/(\d+)\/anos$/);
+      if (match) {
+        const codigo = Number(match[1]);
+        if (codigo === HIT_CODIGO) {
+          return jsonResponse([
+            { codigo: "2015-1", nome: "2015 Gasolina" },
+            { codigo: "2014-1", nome: "2014 Gasolina" },
+          ]);
+        }
+        return jsonResponse([
+          { codigo: "2004-1", nome: "2004 Gasolina" },
+          { codigo: "2003-1", nome: "2003 Gasolina" },
+        ]);
+      }
+      // /valor endpoint
+      return jsonResponse({
+        Valor: "R$ 30.000,00",
+        Marca: "VW - VolksWagen",
+        Modelo: "Gol City Trend 1.0 Mi Total Flex 8V 2p",
+        AnoModelo: 2015,
+        Combustivel: "Gasolina",
+        CodigoFipe: "005340-6",
+        MesReferencia: "abril de 2026",
+        TipoVeiculo: 1,
+        SiglaCombustivel: "G",
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await POST(makeRequest({ marca: "Volkswagen", modelo: "Gol", ano: 2015 }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toMatchObject({ fipe: 30000, ano: 2015 });
+  });
 });
 
 describe("POST /api/fipe — upstream failures (T-04-04, T-04-05)", () => {
