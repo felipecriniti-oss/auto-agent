@@ -261,6 +261,53 @@ describe("POST /api/negotiate/stream — SSE happy path", () => {
   });
 });
 
+describe("POST /api/negotiate/stream — history normalization (Bug B fix)", () => {
+  it("prepends synthetic user turn when incoming history starts with assistant (turn 2+)", async () => {
+    streamFactory = () => makeFakeStream(["ok"]);
+    const { POST } = await importRoute();
+    // Exactly the shape the frontend sends on round 2 after the user replies:
+    // persisted agent opener + fresh seller reply.
+    const body = baseBody();
+    body.messages = [
+      // @ts-expect-error — valid role per schema
+      { role: "assistant", content: "Olá, vi seu anúncio. Ainda está disponível?" },
+      { role: "user", content: "Sim, 52k." },
+    ];
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(200);
+    await readStream(res);
+
+    // Anthropic MUST receive a history whose first message is role:"user".
+    expect(Array.isArray(lastMessages)).toBe(true);
+    expect((lastMessages[0] as { role: string }).role).toBe("user");
+    // The original turns are preserved after the synthetic opener.
+    expect(lastMessages).toHaveLength(3);
+    expect(lastMessages[1]).toMatchObject({
+      role: "assistant",
+      content: "Olá, vi seu anúncio. Ainda está disponível?",
+    });
+    expect(lastMessages[2]).toMatchObject({ role: "user", content: "Sim, 52k." });
+  });
+
+  it("does not modify a history that already starts with user", async () => {
+    streamFactory = () => makeFakeStream(["ok"]);
+    const { POST } = await importRoute();
+    const body = baseBody();
+    body.messages = [
+      { role: "user", content: "Início da conversa." },
+      // @ts-expect-error — valid role per schema
+      { role: "assistant", content: "Olá." },
+      { role: "user", content: "Quanto o senhor aceita?" },
+    ];
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(200);
+    await readStream(res);
+
+    expect(lastMessages).toHaveLength(3);
+    expect((lastMessages[0] as { content: string }).content).toBe("Início da conversa.");
+  });
+});
+
 describe("POST /api/negotiate/stream — upstream error (T-06-04 do-not-leak)", () => {
   it("emits generic error frame and never leaks upstream error text", async () => {
     streamFactory = () => makeFakeStream(["partial"], { fail: true });
