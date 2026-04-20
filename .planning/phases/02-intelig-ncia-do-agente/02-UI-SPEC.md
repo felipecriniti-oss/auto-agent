@@ -5,6 +5,8 @@ status: draft
 shadcn_initialized: true
 preset: new-york
 created: 2026-04-20
+revised: 2026-04-20
+revision_reason: "Fix 2 BLOCK issues: collapse typography to 2 weights (drop 400), replace 3 non-4px-multiple spacing values"
 ---
 
 # Phase 2 — UI Design Contract: Inteligência do Agente
@@ -44,18 +46,22 @@ Locked from Phase 1. 8-point Tailwind scale only. No exceptions for Phase 2.
 
 Exceptions: touch target minimum 44px height for star rating buttons (use `min-h-[44px]` on the star row wrapper).
 
+All spacing values resolve to multiples of 4px. No `.5` Tailwind suffixes permitted anywhere in this spec.
+
 ---
 
 ## Typography
 
-Locked from Phase 1. All text uses `font-sans`.
+Locked from Phase 1. All text uses `font-sans`. Exactly 2 weights: 500 (medium) and 700 (bold).
 
 | Role | Tailwind class | Size | Weight | Line Height | Usage |
 |------|---------------|------|--------|-------------|-------|
-| Body | `text-sm` | 14px | 400 (normal) | 1.5 | Form labels, tab content, disclosure text, scorecard row text |
-| Label / caption | `text-xs` | 12px | 500 (medium) | 1.4 | Badge text, uppercase section headers, status bar, star count label |
+| Body | `text-sm font-medium` | 14px | 500 (medium) | 1.5 | Form labels, tab content, disclosure text, scorecard row text |
+| Label / caption | `text-xs font-medium` | 12px | 500 (medium) | 1.4 | Badge text, uppercase section headers, status bar, star count label |
 | Heading / card title | `text-sm font-medium` | 14px | 500 | 1.4 | Card titles, tab labels, section headers within panels |
 | KPI display | `text-2xl font-bold` | 24px | 700 | 1.2 | Benchmark scorecard aggregate values (e.g. "23.4%") |
+
+Weights in use: `font-medium` (500) only for body/label/heading, `font-bold` (700) for KPI display only. `font-normal` (400) is not used anywhere in Phase 2.
 
 No new type sizes introduced. Phase 1 locked: `text-xs`, `text-sm`, `text-2xl`, `font-medium`, `font-bold`.
 
@@ -158,6 +164,8 @@ All copy in pt-BR. Direct, technical-but-approachable voice. No jargon ("chain-o
 
 ## Surface 1 — Config Panel (INTEL-04)
 
+**Primary focal point:** Submit button "Salvar configuração" — full-width, primary color, bottom of form.
+
 ### Purpose
 
 Replace the left column's `<AdListingForm>` slot with a tabbed panel when needed. Two tabs: "Anúncio" (existing `AdListingForm`) and "Configuração" (new `AgentConfigForm`). Tabs are always accessible. During an active negotiation, saving config shows a warning notice instead of applying immediately.
@@ -234,7 +242,7 @@ Replace the left column's `<AdListingForm>` slot with a tabbed panel when needed
 | Tab list height | 36px (`h-9`) |
 | Tab content padding | `p-4` (16px) |
 | Form field spacing | `space-y-4` (16px between fields) |
-| Label-to-input gap | `mt-1.5` (6px, Tailwind default for form fields) |
+| Label-to-input gap | `mt-2` (8px — 4px-grid aligned) |
 | Input height | `h-9` (36px, shadcn default) |
 | Submit button | full-width `w-full`, height `h-9` |
 | Alert padding | shadcn default (`p-4`) |
@@ -245,9 +253,9 @@ Replace the left column's `<AdListingForm>` slot with a tabbed panel when needed
 |---------|---------|
 | Tab labels | `text-sm font-medium` |
 | Field labels | `text-sm font-medium` (shadcn Label default) |
-| Input text | `text-sm` |
-| Radio option labels | `text-sm` |
-| Alert notice text | `text-sm text-amber-700` |
+| Input text | `text-sm font-medium` |
+| Radio option labels | `text-sm font-medium` |
+| Alert notice text | `text-sm font-medium text-amber-700` |
 | Submit button text | `text-sm font-medium` |
 
 ### Color
@@ -290,6 +298,8 @@ Replace the left column's `<AdListingForm>` slot with a tabbed panel when needed
 
 ## Surface 2 — AgentThinking Disclosure (INTEL-05)
 
+**Primary focal point:** Violet disclosure header "Raciocínio do agente" — visually distinct from chat bubbles via violet background tint.
+
 ### Purpose
 
 An expandable disclosure rendered inline below each agent MessageBubble, showing the rationale/chain-of-thought for that turn. A global toggle "Ver pensamento" / "Ocultar pensamento" in `NegotiationStatusBar` controls the `defaultOpen` state of all disclosures. Default: all disclosures closed.
@@ -302,7 +312,7 @@ An expandable disclosure rendered inline below each agent MessageBubble, showing
   role="switch"
   aria-checked={thinkingVisible}
   aria-label={thinkingVisible ? "Ocultar raciocínio de todos os turnos" : "Ativar exibição do raciocínio"}
-  className="ml-auto flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50
+  className="ml-auto flex items-center gap-1 rounded-md border border-violet-200 bg-violet-50
              px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100
              data-[state=on]:bg-violet-100"
   onClick={toggleThinking}
@@ -328,7 +338,7 @@ An expandable disclosure rendered inline below each agent MessageBubble, showing
     className="mt-1 rounded-md border border-violet-200 bg-violet-50"
   >
     <summary
-      className="flex cursor-pointer items-center gap-1.5 px-3 py-2
+      className="flex cursor-pointer items-center gap-1 px-3 py-2
                  text-xs font-medium text-violet-700 hover:bg-violet-100
                  list-none select-none"
     >
@@ -338,15 +348,15 @@ An expandable disclosure rendered inline below each agent MessageBubble, showing
     <div className="border-t border-violet-200 px-3 py-2">
       {isStreaming && !rationale ? (
         <!-- Loading state -->
-        <p className="text-xs text-muted-foreground italic">Analisando...</p>
+        <p className="text-xs font-medium text-muted-foreground italic">Analisando...</p>
       ) : !rationale ? (
         <!-- Empty state -->
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs font-medium text-muted-foreground">
           Nenhum raciocínio disponível para esta rodada.
         </p>
       ) : (
         <!-- Content -->
-        <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{rationale}</p>
+        <p className="text-xs font-medium text-slate-700 leading-relaxed whitespace-pre-wrap">{rationale}</p>
       )}
     </div>
   </details>
@@ -367,15 +377,17 @@ Implementation note: use native `<details>`/`<summary>` for disclosure. Do not u
 | Margin above disclosure | `mt-1` (4px — tight coupling to agent bubble above) |
 | Max width | Inherits from MessageBubble container |
 | Toggle in StatusBar | `px-2 py-1` |
+| Icon-to-text gap in toggle | `gap-1` (4px) |
+| Icon-to-text gap in summary | `gap-1` (4px) |
 
 ### Typography
 
 | Element | Classes |
 |---------|---------|
 | Summary trigger | `text-xs font-medium text-violet-700` |
-| Rationale body | `text-xs text-slate-700 leading-relaxed whitespace-pre-wrap` |
-| Loading text | `text-xs text-muted-foreground italic` |
-| Empty/error text | `text-xs text-muted-foreground` |
+| Rationale body | `text-xs font-medium text-slate-700 leading-relaxed whitespace-pre-wrap` |
+| Loading text | `text-xs font-medium text-muted-foreground italic` |
+| Empty/error text | `text-xs font-medium text-muted-foreground` |
 | StatusBar toggle | `text-xs font-medium text-violet-700` |
 
 ### Color
@@ -422,6 +434,8 @@ Implementation note: use native `<details>`/`<summary>` for disclosure. Do not u
 
 ## Surface 3 — Benchmark Scorecard (/benchmark)
 
+**Primary focal point:** 4-card KPI row at top of page — aggregate metrics are the first data users read on arrival.
+
 ### Purpose
 
 Dedicated route listing all negotiation sessions stored in localStorage. Allows Felipe/Lucas to annotate each negotiation with a 1–5 star quality rating and view aggregate metrics as a gate criterion for Phase 2 completion.
@@ -437,7 +451,7 @@ Dedicated route listing all negotiation sessions stored in localStorage. Allows 
   <main className="mx-auto max-w-7xl px-6 py-8">
     <header className="mb-6">
       <h1 className="text-2xl font-bold">Benchmark</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <p className="mt-1 text-sm font-medium text-muted-foreground">
         Acompanhe o desempenho das negociações registradas nesta sessão.
       </p>
     </header>
@@ -482,7 +496,7 @@ Dedicated route listing all negotiation sessions stored in localStorage. Allows 
                   border-slate-300 bg-slate-50 py-16 text-center">
     <BarChart2 className="mb-3 h-8 w-8 text-slate-400" aria-hidden="true" />
     <h2 className="text-sm font-medium text-slate-700">Nenhuma negociação registrada</h2>
-    <p className="mt-1 text-sm text-muted-foreground">
+    <p className="mt-1 text-sm font-medium text-muted-foreground">
       Conclua ao menos uma negociação para ver os resultados aqui.
     </p>
     <Button asChild variant="outline" className="mt-4">
@@ -516,15 +530,15 @@ Dedicated route listing all negotiation sessions stored in localStorage. Allows 
 ```
 <BenchmarkRow session={s} onRate={onRate}>
   <tr className="hover:bg-slate-50">
-    <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(s.endedAt)}</td>
+    <td className="px-4 py-3 text-xs font-medium text-muted-foreground">{formatDate(s.endedAt)}</td>
     <td className="px-4 py-3">
       <div className="font-medium">{s.listing.marca} {s.listing.modelo}</div>
-      <div className="text-xs text-muted-foreground">{s.listing.ano} • {s.listing.cidade}</div>
+      <div className="text-xs font-medium text-muted-foreground">{s.listing.ano} • {s.listing.cidade}</div>
     </td>
     <td className="px-4 py-3 text-right">
       <ReductionBadge reduction={s.fipeReductionPct} />
     </td>
-    <td className="px-4 py-3 text-right text-sm">
+    <td className="px-4 py-3 text-right text-sm font-medium">
       {s.round}/{s.maxRounds}
     </td>
     <td className="px-4 py-3">
@@ -553,7 +567,7 @@ Dedicated route listing all negotiation sessions stored in localStorage. Allows 
 ```
 <StarRating value={rating} onChange={onChange}>
   <div
-    className="flex items-center gap-0.5 min-h-[44px]"
+    className="flex items-center gap-1 min-h-[44px]"
     role="group"
     aria-label="Qualidade da negociação"
   >
@@ -564,7 +578,7 @@ Dedicated route listing all negotiation sessions stored in localStorage. Allows 
         onClick={() => onChange(star)}
         aria-label={`${star} de 5 estrelas`}
         aria-pressed={value === star}
-        className="rounded p-0.5 hover:scale-110 focus-visible:outline-2
+        className="rounded p-1 hover:scale-110 focus-visible:outline-2
                    focus-visible:outline-primary transition-transform"
       >
         <Star
@@ -588,9 +602,9 @@ Add a link to `/benchmark` in the page header. Since Phase 1 has no explicit `<H
 <!-- In src/app/layout.tsx or page.tsx — new nav strip -->
 <nav className="border-b border-slate-200 bg-white">
   <div className="mx-auto flex max-w-7xl items-center gap-6 px-6 py-3">
-    <span className="text-sm font-semibold text-foreground">AutoAgent</span>
-    <a href="/" className="text-sm text-muted-foreground hover:text-foreground">Chat</a>
-    <a href="/benchmark" className="text-sm text-muted-foreground hover:text-foreground">Benchmark</a>
+    <span className="text-sm font-medium text-foreground">AutoAgent</span>
+    <a href="/" className="text-sm font-medium text-muted-foreground hover:text-foreground">Chat</a>
+    <a href="/benchmark" className="text-sm font-medium text-muted-foreground hover:text-foreground">Benchmark</a>
   </div>
 </nav>
 ```
@@ -613,6 +627,8 @@ Active link: add `text-foreground font-medium` to the currently active route lin
 | Empty state icon size | `h-8 w-8` |
 | Star icon size | `h-4 w-4` (16px) |
 | Star button touch target | `min-h-[44px]` on wrapper row |
+| Star-to-star gap | `gap-1` (4px) |
+| Star button inner padding | `p-1` (4px) |
 | Nav bar height | `py-3` (~48px effective) |
 
 ### Typography
@@ -620,19 +636,19 @@ Active link: add `text-foreground font-medium` to the currently active route lin
 | Element | Classes |
 |---------|---------|
 | Page title | `text-2xl font-bold` |
-| Page subtitle | `text-sm text-muted-foreground` |
+| Page subtitle | `text-sm font-medium text-muted-foreground` |
 | Aggregate card label | `text-xs font-medium uppercase tracking-wide text-muted-foreground` |
 | Aggregate card value | `text-2xl font-bold` (color varies by metric) |
 | Table header | `text-xs font-medium uppercase tracking-wide text-muted-foreground` |
 | Table row — vehicle name | `text-sm font-medium` |
-| Table row — vehicle detail | `text-xs text-muted-foreground` |
-| Table row — date | `text-xs text-muted-foreground` |
-| Table row — rounds | `text-sm` |
+| Table row — vehicle detail | `text-xs font-medium text-muted-foreground` |
+| Table row — date | `text-xs font-medium text-muted-foreground` |
+| Table row — rounds | `text-sm font-medium` |
 | Badge text | `text-xs font-medium` (shadcn Badge default) |
 | Empty state heading | `text-sm font-medium text-slate-700` |
-| Empty state body | `text-sm text-muted-foreground` |
-| Empty state CTA | `text-sm` (shadcn Button outline) |
-| Nav links | `text-sm` |
+| Empty state body | `text-sm font-medium text-muted-foreground` |
+| Empty state CTA | `text-sm font-medium` (shadcn Button outline) |
+| Nav links | `text-sm font-medium` |
 
 ### Color
 
@@ -664,7 +680,7 @@ Active link: add `text-foreground font-medium` to the currently active route lin
 |-------|----------|
 | Page load — no sessions | Empty state renders with icon, copy, and CTA button |
 | Page load — with sessions | Aggregate cards populate; table rows render |
-| Page load — localStorage error | Error message replaces table: "Erro ao carregar histórico. Os dados podem estar corrompidos." with `text-destructive text-sm` |
+| Page load — localStorage error | Error message replaces table: "Erro ao carregar histórico. Os dados podem estar corrompidos." with `text-destructive text-sm font-medium` |
 | Star hover | Individual star button `hover:scale-110` via Tailwind transition |
 | Star click | Rating persists to localStorage immediately; no confirmation needed; no toast (interaction is fast + reversible) |
 | Rating already set | Stars filled up to current rating; clicking same star clears rating (toggle: `onChange(value === star ? 0 : star)`) |
