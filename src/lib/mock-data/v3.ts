@@ -17,6 +17,10 @@ export interface PlanConfig {
   color: string;
   priority: string;
   support: string;
+  description: string;
+  features: string[];
+  breakEvenVsStarter: number;
+  hot?: boolean;
 }
 
 export type Source = "WebMotors" | "Mercado Livre" | "OLX";
@@ -84,6 +88,14 @@ export interface DashKPIs {
   economiaCapturadaMes: number;
   feesPagosMes: number;
   roiMes: number;
+  deals_mes: number;
+  desconto_medio_fipe: number;
+  margem_adicional_lojista_deal: number;
+  lojistas_ativos: number;
+  nps_lojista: number;
+  tempo_medio_deal_segundos: number;
+  take_rate_blended: number;
+  cac_lojista: number;
 }
 
 export type ChatTurnFrom = "agent" | "seller";
@@ -183,33 +195,58 @@ export const DS = {
 export const plansConfig: Record<PlanKey, PlanConfig> = {
   starter: {
     name: "Starter",
-    price: 197,
-    feeRate: 0.06,
-    feeLabel: "6%",
+    price: 0,
+    feeRate: 0.08,
+    feeLabel: "8%",
     dd: 10,
     color: "blue",
-    priority: "Padrão",
-    support: "Chat",
+    priority: "Fila FIFO",
+    support: "WhatsApp",
+    description: "Fila FIFO · 48h exclusividade · WhatsApp suporte · sem multa",
+    features: [
+      "Fila FIFO (ordem de chegada)",
+      "48h de exclusividade nos deals",
+      "Suporte via WhatsApp",
+      "Sem multa por cancelamento",
+    ],
+    breakEvenVsStarter: 0,
   },
   premium: {
     name: "Premium",
-    price: 499,
-    feeRate: 0.03,
-    feeLabel: "3%",
+    price: 1490,
+    feeRate: 0.04,
+    feeLabel: "4%",
     dd: 50,
     color: "violet",
-    priority: "1h antecipada",
-    support: "Dedicado",
+    priority: "Acesso antecipado 48h",
+    support: "Dedicado · SLA 4h",
+    description: "Acesso antecipado 48h · 7 dias exclusividade · SLA 4h · gerente dedicado",
+    features: [
+      "Acesso antecipado de 48h aos deals",
+      "7 dias de exclusividade",
+      "SLA de suporte em 4h",
+      "Gerente de conta dedicado",
+    ],
+    breakEvenVsStarter: 0.34,
+    hot: true,
   },
   enterprise: {
     name: "Enterprise",
-    price: 1997,
-    feeRate: 0.02,
-    feeLabel: "2%",
+    price: 5900,
+    feeRate: 0.025,
+    feeLabel: "2.5%",
     dd: "∞",
     color: "amber",
-    priority: "Tempo real",
+    priority: "API · tempo real",
     support: "Account Manager",
+    description: "API · multi-loja até 10 CNPJs · DMS integration · onboarding white-glove",
+    features: [
+      "API dedicada para automação",
+      "Multi-loja até 10 CNPJs",
+      "Integração com DMS",
+      "Onboarding white-glove",
+    ],
+    breakEvenVsStarter: 3,
   },
 };
 
@@ -464,6 +501,14 @@ export const dashKPIs: DashKPIs = {
   economiaCapturadaMes: 162000,
   feesPagosMes: 9720,
   roiMes: 16.7,
+  deals_mes: 1420,
+  desconto_medio_fipe: 24,
+  margem_adicional_lojista_deal: 8400,
+  lojistas_ativos: 60,
+  nps_lojista: 72,
+  tempo_medio_deal_segundos: 47,
+  take_rate_blended: 3.1,
+  cac_lojista: 68,
 };
 
 // ─── CHAT HISTORIES BY OPPORTUNITY ───────────────────────────
