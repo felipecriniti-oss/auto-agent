@@ -35,17 +35,24 @@ export default function MyDealsModule(): React.JSX.Element {
   }, [myDeals]);
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-6 p-6 md:p-8">
+      {/* Editorial header */}
+      <div className="flex flex-col gap-5 border-b border-slate-200/70 pb-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <FileCheck size={22} className="text-blue-600" />
-            Meus Deals
-          </h2>
-          <p className="text-sm text-slate-500 mt-1">
-            {myDeals.length} {myDeals.length === 1 ? "deal" : "deals"} — acompanhamento de
-            contratos, laudos, transferências e pagamentos
+          <div className="mb-2 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-[#4C46DC]">
+            <FileCheck size={12} />
+            Meus Deals · acompanhamento
+          </div>
+          <h1
+            className="text-3xl font-semibold leading-[1.05] tracking-tight text-slate-900 md:text-4xl"
+            style={{ fontFamily: "var(--font-fraunces, Georgia, serif)" }}
+          >
+            {myDeals.length} {myDeals.length === 1 ? "deal" : "deals"}{" "}
+            <em className="italic text-[#4C46DC]">no seu pátio</em>.
+          </h1>
+          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-slate-600">
+            Acompanhamento de contratos, laudos, transferências e pagamentos. Cada deal tem próxima
+            ação clara — sem burocracia espalhada.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

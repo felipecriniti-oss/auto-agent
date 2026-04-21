@@ -299,17 +299,23 @@ function BackstageHeader({
   onClose,
 }: BackstageHeaderProps): React.JSX.Element {
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex items-start justify-between gap-4 border-b border-slate-200/70 pb-5">
       <div className="space-y-2">
         <button
           type="button"
           onClick={onBack}
-          className="text-xs font-medium text-slate-500 hover:text-blue-600 inline-flex items-center gap-1"
+          className="inline-flex items-center gap-1 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400 transition-colors hover:text-[#4C46DC]"
         >
           <ArrowLeft size={12} /> Voltar ao Marketplace
         </button>
-        <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Bot size={22} className="text-blue-600" />
+        <div className="flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-[#4C46DC]">
+          <Bot size={12} />
+          Backstage · sessão ao vivo
+        </div>
+        <h2
+          className="text-3xl font-semibold leading-[1.05] tracking-tight text-slate-900 md:text-4xl"
+          style={{ fontFamily: "var(--font-fraunces, Georgia, serif)" }}
+        >
           {title}
         </h2>
         {subtitle ? <div>{subtitle}</div> : null}
@@ -318,7 +324,7 @@ function BackstageHeader({
         <button
           type="button"
           onClick={onClose}
-          className="px-3 py-2 bg-white border border-slate-200 hover:border-red-300 text-slate-700 hover:text-red-600 rounded-lg text-sm font-medium inline-flex items-center gap-2"
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-red-300 hover:text-red-600"
         >
           <X size={14} /> Encerrar e voltar
         </button>
