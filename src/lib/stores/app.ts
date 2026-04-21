@@ -25,6 +25,7 @@ interface AppState {
   onboardingComplete: boolean;
   opportunities: Opportunity[];
   myDeals: MyDeal[];
+  activeOpportunityId: number | null;
 
   // actions
   setActiveModule: (module: AppModule) => void;
@@ -32,11 +33,17 @@ interface AppState {
   completeOnboarding: () => void;
   addOpportunity: (opp: Opportunity) => void;
   assumeDeal: (oppId: number) => void;
+  setActiveOpportunity: (id: number | null) => void;
 }
 
 function makeInitialState(): Pick<
   AppState,
-  "activeModule" | "currentPlan" | "onboardingComplete" | "opportunities" | "myDeals"
+  | "activeModule"
+  | "currentPlan"
+  | "onboardingComplete"
+  | "opportunities"
+  | "myDeals"
+  | "activeOpportunityId"
 > {
   return {
     activeModule: "marketplace",
@@ -44,6 +51,7 @@ function makeInitialState(): Pick<
     onboardingComplete: false,
     opportunities: mockOpportunities,
     myDeals: mockMyDeals,
+    activeOpportunityId: null,
   };
 }
 
@@ -85,6 +93,8 @@ export const useAppStore = create<AppState>()(
           myDeals: [newDeal, ...myDeals],
         });
       },
+
+      setActiveOpportunity: (id) => set({ activeOpportunityId: id }),
     }),
     {
       name: "autoagent-app-v1",
