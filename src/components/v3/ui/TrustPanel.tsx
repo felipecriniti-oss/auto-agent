@@ -21,7 +21,7 @@ const TRUST_ITEMS: TrustItem[] = [
   {
     icon: Wallet,
     title: "Escrow garantido",
-    body: "Seu pagamento ao vendedor fica retido na AutoAgent (Asaas regulado pelo BCB) e só é liberado após confirmação de transferência DETRAN.",
+    body: "Seu pagamento ao vendedor fica retido na AutoAgente (Asaas regulado pelo BCB) e só é liberado após confirmação de transferência DETRAN.",
   },
   {
     icon: RefreshCw,
@@ -41,7 +41,7 @@ const TRUST_ITEMS: TrustItem[] = [
   {
     icon: Headphones,
     title: "Suporte humano dedicado",
-    body: "Ops da AutoAgent acompanha a transação até a transferência. Disputas são resolvidas em até 48h.",
+    body: "Ops da AutoAgente acompanha a transação até a transferência. Disputas são resolvidas em até 48h.",
   },
 ];
 
@@ -52,7 +52,7 @@ export default function TrustPanel({ inline = false }: TrustPanelProps) {
         <div className="flex items-center gap-2 mb-3">
           <ShieldCheck size={18} className="text-emerald-600" />
           <h4 className="text-sm font-bold text-emerald-900">
-            Garantias AutoAgent — o que protege seu fee
+            Garantias AutoAgente — o que protege seu fee
           </h4>
         </div>
       )}

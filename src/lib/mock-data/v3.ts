@@ -519,7 +519,7 @@ export const mockChatHistories: ChatHistoriesByOpportunity = {
       from: "agent",
       round: 1,
       time: "Dia 1, 14:32",
-      text: "Olá Marcos, tudo bem? Sou o AutoAgent, intermediador profissional de compra de seminovos. Vi seu anúncio do Audi Q5 — ótimo carro. Tenho uma rede de lojistas verificados que pode ter interesse. Posso conversar sobre uma proposta à vista, com pagamento em até 48h?",
+      text: "Olá Marcos, tudo bem? Sou o AutoAgente, intermediador profissional de compra de seminovos. Vi seu anúncio do Audi Q5 — ótimo carro. Tenho uma rede de lojistas verificados que pode ter interesse. Posso conversar sobre uma proposta à vista, com pagamento em até 48h?",
     },
     {
       from: "seller",

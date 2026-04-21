@@ -15,7 +15,7 @@ const validListing: Listing = {
 
 describe("SYSTEM_PROMPT_V1_TEMPLATE — drift guard", () => {
   it("begins with the canonical role statement", () => {
-    expect(SYSTEM_PROMPT_V1_TEMPLATE.startsWith("Você é o AutoAgent")).toBe(true);
+    expect(SYSTEM_PROMPT_V1_TEMPLATE.startsWith("Você é o AutoAgente")).toBe(true);
   });
 
   it("contains all 14 placeholders", () => {

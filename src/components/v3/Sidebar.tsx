@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Target,
 } from "lucide-react";
+import Image from "next/image";
 
 interface SidebarItem {
   key: AppModule;
@@ -89,19 +90,21 @@ export default function Sidebar(): React.JSX.Element {
   return (
     <aside className="flex w-72 shrink-0 flex-col border-r border-slate-200/80 bg-white">
       {/* Logo */}
-      <div className="border-b border-slate-200/80 px-6 py-6">
-        <div className="flex items-baseline gap-2">
-          <span
-            className="font-display text-2xl font-semibold leading-none tracking-tight text-slate-900"
-            style={{ fontFamily: "var(--font-fraunces, Georgia, serif)" }}
-          >
-            AutoAgent<span className="italic text-[#4C46DC]">e</span>
-          </span>
-          <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+      <div className="border-b border-slate-200/80 px-5 py-5">
+        <div className="flex items-center gap-2">
+          <Image
+            src="/logo.jpeg"
+            alt="AutoAgente"
+            width={520}
+            height={180}
+            className="h-10 w-auto select-none"
+            priority
+          />
+          <span className="ml-auto rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
             v3
           </span>
         </div>
-        <p className="mt-1.5 text-xs font-medium tracking-wide text-slate-500">
+        <p className="mt-2 text-[11px] font-medium tracking-wide text-slate-500">
           painel do lojista · piloto SP
         </p>
       </div>

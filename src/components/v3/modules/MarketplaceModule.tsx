@@ -109,43 +109,47 @@ export default function MarketplaceModule(): React.JSX.Element {
   return (
     <div className="space-y-6 p-6 md:p-8">
       {/* Editorial header */}
-      <header className="flex flex-col gap-5 border-b border-slate-200/70 pb-6 md:flex-row md:items-end md:justify-between">
-        <div className="max-w-2xl">
-          <div className="mb-2 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-[#4C46DC]">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#4C46DC]" />
-            01 · Operação · Marketplace
+      <header className="border-b border-slate-200/70 pb-6">
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="max-w-2xl">
+            <div className="mb-3 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-[#4C46DC]">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#4C46DC]" />
+              Marketplace · oportunidades do dia
+            </div>
+            <h1
+              className="text-4xl font-semibold leading-[1] tracking-tight text-slate-900 md:text-[52px]"
+              style={{ fontFamily: "var(--font-fraunces, Georgia, serif)" }}
+            >
+              Carros <em className="italic text-[#4C46DC]">20 a 30%</em>
+              <br />
+              abaixo da FIPE.
+            </h1>
+            <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-slate-600">
+              O agente já achou o vendedor, negociou o preço e travou a exclusividade. Você só
+              escolhe o carro e assume o deal — paga o fee só na confirmação.
+            </p>
           </div>
-          <h1
-            className="text-4xl font-semibold leading-[1.05] tracking-tight text-slate-900 md:text-5xl"
-            style={{ fontFamily: "var(--font-fraunces, Georgia, serif)" }}
+          <button
+            type="button"
+            onClick={() => setShowImportDialog(true)}
+            className="group flex shrink-0 items-center gap-2 rounded-lg bg-[#4C46DC] px-5 py-3 text-sm font-semibold text-white shadow-[0_6px_20px_-8px_rgba(76,70,220,0.55)] ring-1 ring-[#4C46DC]/20 transition-all hover:bg-[#3d38b8] hover:shadow-[0_8px_24px_-6px_rgba(76,70,220,0.65)]"
           >
-            Oportunidades <em className="italic text-[#4C46DC]">pré-negociadas</em>.
-          </h1>
-          <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-600">
-            O agente já negociou preço e exclusividade com o vendedor PF. Você assume o deal com um
-            clique — fee só é cobrado na confirmação.
-          </p>
-          <div className="mt-4 flex items-center gap-4 text-xs text-slate-500">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-              <span className="font-mono font-semibold text-slate-700">{filtered.length}</span>
-              <span>ativas</span>
-            </span>
-            <span className="text-slate-300">·</span>
-            <span className="flex items-center gap-1.5">
-              <Timer size={12} className="text-amber-500" />
-              exclusividade de até 7 dias
-            </span>
-          </div>
+            <Sparkles size={16} className="transition-transform group-hover:scale-110" />
+            Importar por URL
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowImportDialog(true)}
-          className="group flex shrink-0 items-center gap-2 rounded-lg bg-[#4C46DC] px-5 py-3 text-sm font-semibold text-white shadow-[0_6px_20px_-8px_rgba(76,70,220,0.55)] ring-1 ring-[#4C46DC]/20 transition-all hover:bg-[#3d38b8] hover:shadow-[0_8px_24px_-6px_rgba(76,70,220,0.65)]"
-        >
-          <Sparkles size={16} className="transition-transform group-hover:scale-110" />
-          Importar por URL
-        </button>
+
+        {/* Stats strip — landing-echoed proof points */}
+        <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-slate-200/60 ring-1 ring-inset ring-slate-200/60 md:grid-cols-4">
+          <HeaderStat
+            value={filtered.length.toString()}
+            label="oportunidades ativas"
+            accent="emerald"
+          />
+          <HeaderStat value="47s" label="por deal" mono />
+          <HeaderStat value="−24%" label="vs FIPE · média" accent="violet" />
+          <HeaderStat value="7 dias" label="exclusividade sua" />
+        </div>
       </header>
 
       {/* Tier banner (starter → nudge) */}
@@ -673,6 +677,37 @@ interface FilterPillGroupProps<T extends string | number> {
   options: { value: T; label: string }[];
 }
 
+// ─── Header stat cell ───────────────────────────────────────────
+
+interface HeaderStatProps {
+  value: string;
+  label: string;
+  accent?: "emerald" | "violet";
+  mono?: boolean;
+}
+
+function HeaderStat({ value, label, accent, mono }: HeaderStatProps): React.JSX.Element {
+  const valueClass =
+    accent === "emerald"
+      ? "text-emerald-600"
+      : accent === "violet"
+        ? "text-[#4C46DC]"
+        : "text-slate-900";
+  const fontStyle = mono
+    ? { fontFamily: "var(--font-jetbrains-mono, ui-monospace)" }
+    : { fontFamily: "var(--font-fraunces, Georgia, serif)" };
+  return (
+    <div className="bg-white px-4 py-3">
+      <div className={`text-xl font-semibold leading-none ${valueClass}`} style={fontStyle}>
+        {value}
+      </div>
+      <div className="mt-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-slate-400">
+        {label}
+      </div>
+    </div>
+  );
+}
+
 function FilterPillGroup<T extends string | number>({
   value,
   onChange,
@@ -759,10 +794,7 @@ function OpportunityCard({
               <span className="flex items-center gap-1">
                 <Gauge size={11} /> {opp.km.toLocaleString("pt-BR")} km
               </span>
-              <span className="flex items-center gap-1">⛽ {opp.fuel}</span>
-              <span className="flex items-center gap-1">
-                <Palette size={11} /> {opp.color}
-              </span>
+              <span className="flex items-center gap-1 text-slate-400">· {opp.fuel}</span>
             </div>
           </div>
         </div>
@@ -809,42 +841,35 @@ function OpportunityCard({
         </span>
       </div>
 
-      {/* Motivation chips */}
+      {/* Top motivation signal — only the strongest one surfaces on the card */}
       {opp.motivationSignals.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1 border-t border-slate-100 px-5 py-3">
-          {opp.motivationSignals.slice(0, 3).map((s) => (
-            <span
-              key={s}
-              className="rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200/70"
-            >
-              {s}
+        <div className="flex items-center gap-2 border-t border-slate-100 px-5 py-2.5">
+          <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200/70">
+            {opp.motivationSignals[0]}
+          </span>
+          {opp.motivationSignals.length > 1 && (
+            <span className="font-mono text-[10px] text-slate-400">
+              +{opp.motivationSignals.length - 1}
             </span>
-          ))}
+          )}
         </div>
       )}
 
-      {/* Footer — agent/timer/fee + CTA */}
+      {/* Footer — timer + fee + CTA */}
       <div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-5 py-3">
-        <div className="flex items-center gap-3 font-mono text-[10px] text-slate-500">
-          <span className="flex items-center gap-1">
-            <Bot size={11} /> {opp.rounds} voltas
-          </span>
-          <span className="flex items-center gap-1 font-semibold text-amber-600">
-            <Timer size={11} /> {opp.timeLeft}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="hidden font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:inline">
-            fee {planName} {planFeeLabel}
-          </span>
-          <span className="font-mono text-sm font-semibold text-[#4C46DC]">
-            R$ {fee.toLocaleString("pt-BR")}
+        <span className="flex items-center gap-1.5 font-mono text-[11px] font-semibold text-amber-600">
+          <Timer size={12} /> {opp.timeLeft}
+        </span>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[11px] text-slate-500">
+            fee{" "}
+            <span className="font-semibold text-slate-900">R$ {fee.toLocaleString("pt-BR")}</span>
           </span>
           <span
             aria-hidden="true"
-            className="ml-2 inline-flex items-center gap-1 rounded-md bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors group-hover:bg-[#4C46DC]"
+            className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors group-hover:bg-[#4C46DC]"
           >
-            <Eye size={12} /> Detalhes
+            Ver detalhes
           </span>
         </div>
       </div>

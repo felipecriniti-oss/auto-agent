@@ -32,7 +32,26 @@
       "Bash(pnpm why *)",
       "Bash(git merge *)",
       "Bash(git worktree *)",
-      "Bash(git branch *)"
+      "Bash(git branch *)",
+      "Bash(curl -s -i -X POST https://auto-agent-chi.vercel.app/api/fipe -H \"Content-Type: application/json\" -d '{\"marca\":\"Volkswagen\",\"modelo\":\"Gol 1.6\",\"ano\":2020}')",
+      "Bash(curl -s -i -X POST https://auto-agent-chi.vercel.app/api/negotiate/stream -H \"Content-Type: application/json\" -d '{\"listing\":{\"marca\":\"Volkswagen\",\"modelo\":\"Gol 1.6\",\"ano\":2020,\"km\":45000,\"precoPedido\":52000,\"cidade\":\"SP\",\"diasOnline\":30,\"reducoes\":2},\"fipe\":52000,\"targetPrice\":39000,\"walkAwayPrice\":46800,\"maxRounds\":6,\"messages\":[{\"role\":\"user\",\"content\":\"Início da conversa.\"}]}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -X POST https://auto-agent-chi.vercel.app/api/fipe -H \"Content-Type: application/json\" -d '{\"marca\":\"\",\"modelo\":\"Gol\",\"ano\":2020}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -X POST https://auto-agent-chi.vercel.app/api/fipe -H \"Content-Type: application/json\" -d '{\"marca\":\"VW\",\"modelo\":\"\",\"ano\":2020}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -X POST https://auto-agent-chi.vercel.app/api/fipe -H \"Content-Type: application/json\" -d '{\"marca\":\"VW\",\"modelo\":\"Gol\",\"ano\":\"2020\"}')",
+      "Bash(export PNPM_HOME=\"C:\\\\\\\\Users\\\\\\\\pc\\\\\\\\AppData\\\\\\\\Local\\\\\\\\pnpm\")",
+      "Bash(export PATH=\"$PNPM_HOME:$PATH\")",
+      "Bash(export PATH=\"C:\\\\\\\\Users\\\\\\\\pc\\\\\\\\AppData\\\\\\\\Local\\\\\\\\pnpm:$PATH\")",
+      "Bash(vercel --version)",
+      "Bash(/c/Users/pc/AppData/Local/pnpm/vercel.CMD *)",
+      "Skill(gsd-audit-fix)",
+      "Bash(curl -sS -X POST http://localhost:3000/api/negotiate/stream -H \"content-type: application/json\" -N -d '{\"listing\":{\"marca\":\"VW\",\"modelo\":\"Gol 1.6 MSI\",\"ano\":2020,\"km\":45000,\"precoPedido\":52000,\"cidade\":\"SP\",\"diasOnline\":30,\"reducoes\":2},\"fipe\":48418,\"targetPrice\":38400,\"walkAwayPrice\":43200,\"maxRounds\":6,\"messages\":[{\"role\":\"user\",\"content\":\"oi, comprador?\"}]}' --max-time 30)",
+      "Bash(curl -sS -X POST http://localhost:3001/api/negotiate/stream -H \"content-type: application/json\" -N -d '{\"listing\":{\"marca\":\"VW\",\"modelo\":\"Gol 1.6 MSI\",\"ano\":2020,\"km\":45000,\"precoPedido\":52000,\"cidade\":\"SP\",\"diasOnline\":30,\"reducoes\":2},\"fipe\":48418,\"targetPrice\":38400,\"walkAwayPrice\":43200,\"maxRounds\":6,\"messages\":[{\"role\":\"user\",\"content\":\"oi, comprador?\"}]}' --max-time 45)",
+      "Bash(curl -sSI https://auto-agent-chi.vercel.app/ --max-time 15)",
+      "Bash(curl *)",
+      "Bash(echo \"EXIT=$?\")",
+      "Read(//tmp/**)",
+      "Skill(gsd-debug)",
+      "Skill(gsd-execute-phase)"
     ]
   }
 }

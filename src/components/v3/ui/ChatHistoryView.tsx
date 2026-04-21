@@ -38,7 +38,7 @@ export default function ChatHistoryView({ history, sellerName }: ChatHistoryView
                 <p
                   className={`text-xs font-medium ${isAgent ? "text-blue-600" : "text-slate-500"}`}
                 >
-                  {isAgent ? `AutoAgent · Rodada ${msg.round}` : sellerName}
+                  {isAgent ? `AutoAgente · Rodada ${msg.round}` : sellerName}
                 </p>
                 <span className="text-xs text-slate-400">{msg.time}</span>
               </div>
