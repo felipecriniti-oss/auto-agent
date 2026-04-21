@@ -37,6 +37,15 @@ Todas independentes e podem ser feitas agora enquanto eu trabalho no shell. Nenh
 
 **Se você não quiser criar conta Apify:** fallback viável é scraping caseiro via `fetch` + Cheerio (open-source) rodando na rota Next.js. Mais frágil (WebMotors muda CSS às vezes) mas zero custo e zero vendor lock. Me diz se prefere essa via.
 
+### Env var name — wire-up (confirmado 2026-04-21)
+
+A rota `/api/scrape/webmotors` lê o token do env `APIFY_API_TOKEN` (exato, case-sensitive).
+
+- **Local:** adicionar a linha `APIFY_API_TOKEN=apify_api_xxx` no `.env.local` do repo (já existe template em `.env.example` + `.env.local.example`). Sem o token o endpoint devolve 500 com `{ error: "apify_token_missing" }` — intencional.
+- **Vercel:** Settings → Environment Variables → New → Key `APIFY_API_TOKEN`, Value `apify_api_xxx`. Marcar para **Production**, **Preview** e **Development** (os 3). Re-deploy da branch `main` após adicionar.
+- **Actor primário:** `jupri~webmotors-br-scraper` (o endpoint faz fallback automático para `apify~web-scraper` com `pageFunction` inline se o actor primário não existir mais na conta).
+- **Runtime:** `nodejs` (budget de 45s — scraping single-URL leva 10-30s em média).
+
 ---
 
 ## 3. DigitalOcean (opcional, staging) — só começar se sobrar tempo na quarta
