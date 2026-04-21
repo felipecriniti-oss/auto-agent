@@ -107,72 +107,114 @@ export default function MarketplaceModule(): React.JSX.Element {
   const starterUpgradeSavings = currentPlan === "starter" ? 3 * fakeMonthSavings : 0;
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <ShoppingCart size={22} className="text-blue-600" />
-            Marketplace de Oportunidades
-          </h2>
-          <p className="text-sm text-slate-500 mt-1">
-            {filtered.length} {filtered.length === 1 ? "oportunidade" : "oportunidades"} disponíveis
-            — agente já negociou preço e exclusividade
+    <div className="space-y-6 p-6 md:p-8">
+      {/* Editorial header */}
+      <header className="flex flex-col gap-5 border-b border-slate-200/70 pb-6 md:flex-row md:items-end md:justify-between">
+        <div className="max-w-2xl">
+          <div className="mb-2 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-[#4C46DC]">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#4C46DC]" />
+            01 · Operação · Marketplace
+          </div>
+          <h1
+            className="text-4xl font-semibold leading-[1.05] tracking-tight text-slate-900 md:text-5xl"
+            style={{ fontFamily: "var(--font-fraunces, Georgia, serif)" }}
+          >
+            Oportunidades <em className="italic text-[#4C46DC]">pré-negociadas</em>.
+          </h1>
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-600">
+            O agente já negociou preço e exclusividade com o vendedor PF. Você assume o deal com um
+            clique — fee só é cobrado na confirmação.
           </p>
+          <div className="mt-4 flex items-center gap-4 text-xs text-slate-500">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="font-mono font-semibold text-slate-700">{filtered.length}</span>
+              <span>ativas</span>
+            </span>
+            <span className="text-slate-300">·</span>
+            <span className="flex items-center gap-1.5">
+              <Timer size={12} className="text-amber-500" />
+              exclusividade de até 7 dias
+            </span>
+          </div>
         </div>
         <button
           type="button"
           onClick={() => setShowImportDialog(true)}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold flex items-center gap-2 shadow-sm"
+          className="group flex shrink-0 items-center gap-2 rounded-lg bg-[#4C46DC] px-5 py-3 text-sm font-semibold text-white shadow-[0_6px_20px_-8px_rgba(76,70,220,0.55)] ring-1 ring-[#4C46DC]/20 transition-all hover:bg-[#3d38b8] hover:shadow-[0_8px_24px_-6px_rgba(76,70,220,0.65)]"
         >
-          <Sparkles size={16} />+ Importar por URL
+          <Sparkles size={16} className="transition-transform group-hover:scale-110" />
+          Importar por URL
         </button>
-      </div>
+      </header>
 
       {/* Tier banner (starter → nudge) */}
       {currentPlan === "starter" && (
-        <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl p-4 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-              <Rocket size={20} />
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#4C46DC] via-[#5F54DC] to-[#7063E0] p-5 text-white shadow-lg">
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(-45deg, rgba(255,255,255,0.12) 0 1px, transparent 1px 18px)",
+            }}
+            aria-hidden="true"
+          />
+          <div className="relative flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 ring-1 ring-inset ring-white/30">
+                <Rocket size={20} />
+              </div>
+              <div>
+                <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-white/70">
+                  Migração · Premium
+                </div>
+                <p className="mt-0.5 text-base font-semibold leading-tight">
+                  No Premium você economizaria{" "}
+                  <span
+                    className="italic"
+                    style={{ fontFamily: "var(--font-fraunces, Georgia, serif)" }}
+                  >
+                    R$ {starterUpgradeSavings.toLocaleString("pt-BR")}
+                  </span>{" "}
+                  em fees por mês
+                </p>
+                <p className="mt-1 text-xs text-white/80">
+                  Fee cai de 8% → 4% · acesso antecipado 48h · SLA 4h · gerente dedicado
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="font-semibold">
-                No Premium você economizaria R$ {starterUpgradeSavings.toLocaleString("pt-BR")} em
-                fees por mês
-              </p>
-              <p className="text-xs text-violet-100">
-                Fee cai de 6% → 3% · DD ilimitada · prioridade 1h antecipada
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={() => setActiveModule("settings")}
+              className="shrink-0 rounded-lg bg-white px-4 py-2 text-sm font-bold text-[#4C46DC] shadow-sm transition-colors hover:bg-slate-50"
+            >
+              Simular break-even →
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setActiveModule("settings")}
-            className="px-4 py-2 bg-white text-violet-700 rounded-lg text-sm font-bold hover:bg-violet-50"
-          >
-            Ver planos
-          </button>
         </div>
       )}
 
       {/* Filter bar */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-500 uppercase">Fonte</span>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border border-slate-200/80 bg-white/60 px-4 py-3 backdrop-blur">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Fonte
+          </span>
           <FilterPillGroup<SourceFilter>
             value={sourceFilter}
             onChange={setSourceFilter}
             options={[
               { value: "all", label: "Todas" },
               { value: "WebMotors", label: "WebMotors" },
-              { value: "Mercado Livre", label: "Mercado Livre" },
+              { value: "Mercado Livre", label: "ML" },
               { value: "OLX", label: "OLX" },
             ]}
           />
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-500 uppercase">Margem</span>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Margem
+          </span>
           <FilterPillGroup<MarginFilter>
             value={marginFilter}
             onChange={setMarginFilter}
@@ -183,8 +225,10 @@ export default function MarketplaceModule(): React.JSX.Element {
             ]}
           />
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-500 uppercase">Score</span>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Score
+          </span>
           <FilterPillGroup<ScoreFilter>
             value={scoreFilter}
             onChange={setScoreFilter}
@@ -199,12 +243,27 @@ export default function MarketplaceModule(): React.JSX.Element {
 
       {/* Empty state */}
       {opportunities.length === 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-10 text-center">
-          <ShoppingCart size={36} className="text-slate-300 mx-auto mb-3" />
-          <h3 className="text-base font-semibold text-slate-700">Nenhuma oportunidade ativa</h3>
-          <p className="text-sm text-slate-500 mt-1">
-            Importe por URL ou aguarde o agente finalizar uma negociação.
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-12 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+            <ShoppingCart size={24} className="text-slate-400" />
+          </div>
+          <h3
+            className="mt-4 text-xl font-semibold text-slate-800"
+            style={{ fontFamily: "var(--font-fraunces, Georgia, serif)" }}
+          >
+            A pista está vazia.
+          </h3>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-slate-500">
+            Importe um anúncio real do WebMotors ou aguarde o agente fechar a próxima negociação —
+            novas oportunidades aparecem aqui automaticamente.
           </p>
+          <button
+            type="button"
+            onClick={() => setShowImportDialog(true)}
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            <Sparkles size={14} /> Importar primeiro anúncio
+          </button>
         </div>
       )}
 
@@ -620,21 +679,24 @@ function FilterPillGroup<T extends string | number>({
   options,
 }: FilterPillGroupProps<T>): React.JSX.Element {
   return (
-    <div className="flex gap-1">
-      {options.map((opt) => (
-        <button
-          key={String(opt.value)}
-          type="button"
-          onClick={() => onChange(opt.value)}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-            value === opt.value
-              ? "bg-blue-600 text-white"
-              : "bg-white text-slate-600 border border-slate-200 hover:border-blue-300"
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
+    <div className="inline-flex rounded-lg bg-slate-100/80 p-0.5 ring-1 ring-inset ring-slate-200/60">
+      {options.map((opt) => {
+        const isActive = value === opt.value;
+        return (
+          <button
+            key={String(opt.value)}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+              isActive
+                ? "bg-white text-[#4C46DC] shadow-sm ring-1 ring-inset ring-[#4C46DC]/15"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -657,96 +719,136 @@ function OpportunityCard({
   onOpen,
 }: OpportunityCardProps): React.JSX.Element {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-sm transition-all p-4">
-      <div className="flex items-start gap-4">
-        <div className="w-24 h-20 rounded-lg bg-slate-100 flex items-center justify-center text-3xl flex-shrink-0 border border-slate-200">
-          {opp.img}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <h3 className="text-sm font-semibold text-slate-900 truncate">{opp.vehicle}</h3>
-                <SourceBadge source={opp.source} />
-                {opp.ddStatus === "ok" && (
-                  <Badge variant="success" size="xs">
-                    <ShieldCheck size={10} className="mr-0.5" />
-                    DD ok
-                  </Badge>
-                )}
-                {opp.ddStatus === "review" && (
-                  <Badge variant="warning" size="xs">
-                    <AlertTriangle size={10} className="mr-0.5" />
-                    DD em revisão
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
-                <span className="flex items-center gap-1">
-                  <Calendar size={11} /> {opp.year}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Gauge size={11} /> {opp.km.toLocaleString("pt-BR")} km
-                </span>
-                <span className="flex items-center gap-1">⛽ {opp.fuel}</span>
-                <span className="flex items-center gap-1">
-                  <Palette size={11} /> {opp.color}
-                </span>
-              </div>
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white text-left shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] transition-all hover:-translate-y-0.5 hover:border-[#4C46DC]/30 hover:shadow-[0_10px_28px_-12px_rgba(76,70,220,0.25)]"
+    >
+      {/* Top stripe with vehicle hero */}
+      <div className="flex items-start justify-between gap-4 bg-gradient-to-br from-slate-50 to-white p-5 pb-4">
+        <div className="flex items-start gap-4 min-w-0 flex-1">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-white text-4xl shadow-sm ring-1 ring-inset ring-slate-200/70">
+            {opp.img}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 flex flex-wrap items-center gap-1.5">
+              <SourceBadge source={opp.source} />
+              {opp.ddStatus === "ok" && (
+                <Badge variant="success" size="xs">
+                  <ShieldCheck size={10} className="mr-0.5" />
+                  DD ok
+                </Badge>
+              )}
+              {opp.ddStatus === "review" && (
+                <Badge variant="warning" size="xs">
+                  <AlertTriangle size={10} className="mr-0.5" />
+                  DD revisão
+                </Badge>
+              )}
             </div>
-            <ScoreRing score={opp.score} size={56} />
-          </div>
-
-          {/* Price */}
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-lg font-bold text-emerald-700">
-              R$ {opp.dealPrice.toLocaleString("pt-BR")}
-            </span>
-            <span className="text-xs text-slate-400 line-through">
-              R$ {opp.fipe.toLocaleString("pt-BR")}
-            </span>
-            <span className="text-xs font-semibold text-emerald-600">
-              −R$ {opp.savings.toLocaleString("pt-BR")} ({opp.margin}%)
-            </span>
-          </div>
-
-          <div className="mt-1 text-xs text-slate-500 flex items-center gap-2">
-            <MapPin size={11} /> {opp.location} · <Users size={11} /> {opp.sellerName}
-          </div>
-
-          {/* Motivation chips */}
-          <div className="flex items-center gap-1 mt-2 flex-wrap">
-            {opp.motivationSignals.slice(0, 3).map((s) => (
-              <Badge key={s} variant="warning" size="xs">
-                {s}
-              </Badge>
-            ))}
-          </div>
-
-          {/* Footer */}
-          <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-3 text-xs text-slate-500">
-              <span className="flex items-center gap-1">
-                <Bot size={11} /> {opp.rounds} rodadas
-              </span>
-              <span className="flex items-center gap-1 text-amber-600 font-medium">
-                <Timer size={11} /> {opp.timeLeft}
-              </span>
-              <span className="text-blue-700 font-medium">
-                Fee {planName} ({planFeeLabel}): R$ {fee.toLocaleString("pt-BR")}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={onOpen}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1"
+            <h3
+              className="text-lg font-semibold leading-tight tracking-tight text-slate-900"
+              style={{ fontFamily: "var(--font-fraunces, Georgia, serif)" }}
             >
-              <Eye size={12} /> Ver detalhes
-            </button>
+              {opp.vehicle}
+            </h3>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-slate-500">
+              <span className="flex items-center gap-1">
+                <Calendar size={11} /> {opp.year}
+              </span>
+              <span className="flex items-center gap-1">
+                <Gauge size={11} /> {opp.km.toLocaleString("pt-BR")} km
+              </span>
+              <span className="flex items-center gap-1">⛽ {opp.fuel}</span>
+              <span className="flex items-center gap-1">
+                <Palette size={11} /> {opp.color}
+              </span>
+            </div>
+          </div>
+        </div>
+        <ScoreRing score={opp.score} size={56} />
+      </div>
+
+      {/* Price + savings block */}
+      <div className="flex items-end justify-between gap-3 border-t border-slate-100 px-5 py-4">
+        <div className="min-w-0">
+          <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Fechado pelo agente
+          </div>
+          <div className="mt-0.5 font-mono text-[28px] font-semibold leading-none tracking-tight text-slate-900">
+            R$ {opp.dealPrice.toLocaleString("pt-BR")}
+          </div>
+          <div className="mt-1 font-mono text-[11px] text-slate-400">
+            FIPE <span className="line-through">R$ {opp.fipe.toLocaleString("pt-BR")}</span>
+          </div>
+        </div>
+        <div className="shrink-0 rounded-xl bg-emerald-50 px-3 py-2 text-right ring-1 ring-inset ring-emerald-100">
+          <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700/70">
+            vs FIPE
+          </div>
+          <div
+            className="font-semibold leading-none text-emerald-700 italic"
+            style={{ fontFamily: "var(--font-fraunces, Georgia, serif)", fontSize: "22px" }}
+          >
+            −{opp.margin}%
+          </div>
+          <div className="mt-1 font-mono text-[10px] text-emerald-700/80">
+            −R$ {opp.savings.toLocaleString("pt-BR")}
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Context row */}
+      <div className="flex items-center gap-x-3 gap-y-1 border-t border-slate-100 px-5 py-3 text-[11px] text-slate-500">
+        <span className="flex items-center gap-1">
+          <MapPin size={11} /> {opp.location}
+        </span>
+        <span className="text-slate-300">·</span>
+        <span className="flex items-center gap-1">
+          <Users size={11} /> {opp.sellerName}
+        </span>
+      </div>
+
+      {/* Motivation chips */}
+      {opp.motivationSignals.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1 border-t border-slate-100 px-5 py-3">
+          {opp.motivationSignals.slice(0, 3).map((s) => (
+            <span
+              key={s}
+              className="rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200/70"
+            >
+              {s}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Footer — agent/timer/fee + CTA */}
+      <div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-5 py-3">
+        <div className="flex items-center gap-3 font-mono text-[10px] text-slate-500">
+          <span className="flex items-center gap-1">
+            <Bot size={11} /> {opp.rounds} voltas
+          </span>
+          <span className="flex items-center gap-1 font-semibold text-amber-600">
+            <Timer size={11} /> {opp.timeLeft}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="hidden font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:inline">
+            fee {planName} {planFeeLabel}
+          </span>
+          <span className="font-mono text-sm font-semibold text-[#4C46DC]">
+            R$ {fee.toLocaleString("pt-BR")}
+          </span>
+          <span
+            aria-hidden="true"
+            className="ml-2 inline-flex items-center gap-1 rounded-md bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors group-hover:bg-[#4C46DC]"
+          >
+            <Eye size={12} /> Detalhes
+          </span>
+        </div>
+      </div>
+    </button>
   );
 }
 
