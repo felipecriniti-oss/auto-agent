@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Pivot to v3 product shell (Phase 5)
-last_updated: "2026-04-21T04:30:00.000Z"
-last_activity: 2026-04-21 -- Pivot to v3; Phase 5 plan created; FIPE fix deployed
+stopped_at: Phase 5 Round 3 complete, awaiting user review
+last_updated: "2026-04-22T03:00:00.000Z"
+last_activity: 2026-04-22 -- overnight autonomous sprint (signup + PF sim + modo piloto + visual polish rounds)
 progress:
   total_phases: 5
   completed_phases: 0
@@ -41,9 +41,28 @@ Phase 1 chat engine (`/api/negotiate/stream`, Zustand store, ChatView, SummaryPa
 ## Current Position
 
 Phase: 5 of 5 (v3 Product Shell — pivot)
-Plan: 0 of 8 (Phase 5 just scaffolded)
-Status: Executing
-Last activity: 2026-04-21 -- Pivot to v3; Phase 5 plan created; FIPE fix deployed
+Status: Round 3 complete (user reviewing on wake 2026-04-22)
+Last activity: 2026-04-22 03:00 BRT — overnight autonomous sprint completed 4 rounds
+
+**Overnight sprint summary (authorized by user before sleeping 2026-04-21):**
+
+- Round 1 (`685b76d`): fake-auth gate — SignupView with persona picker
+  mapping to plan tiers; AppShell gates /app behind `onboardingComplete`
+- Round 2A (`1c764c6`): /api/simulate-pf — second Claude playing the
+  seller side with 3 personas (resistente/ansioso/urgente)
+- Round 2B (`186ddd6`): Modo Piloto launcher on Dashboard; drip-feeds
+  5 pre-built opportunities into Marketplace over ~30s with toast
+  progress and a pulsing banner on Marketplace
+- Round 3 (`631ab6e`): visual polish — Dashboard KPI hero + trend
+  strip, Backstage editorial header, MyDeals Fraunces treatment
+
+See `.planning/phases/05-v3-pivot/OVERNIGHT-PROGRESS.md` for the full
+read-in-the-morning summary, including:
+- What's NOT done (Backstage autoplay UI loop — simulator endpoint is
+  ready but BackstageModule wasn't wired to loop through it; half-day
+  of work remaining; has suggested architecture to avoid touching the
+  Phase 1 chat code)
+- Manual test sequence to run on wake
 
 Deferred phases:
 - Phase 2 (Inteligência do Agente) — 7 plans planned, 0 executed. Resume after v3 shell stable.
@@ -86,15 +105,21 @@ Recent decisions affecting current work:
 - Sem autenticação em nenhuma fase deste playground
 - Streaming via SSE (não WebSockets) — compatível com Vercel Edge
 
-### Pending Todos
+### Pending Todos (for user, 2026-04-22 AM)
 
-- Wave 5 (Plan 01-08) requires user setup (Vercel env vars) — pause before execution
-- Manual visual UAT deferred to 01-08 deploy smoke test: D-05 typing-indicator phases, D-06 pin-on-scroll-up, D-11 AbortController drop-partial, live Felipe demo
+- Review overnight work via `OVERNIGHT-PROGRESS.md` + live tests on `/app`
+- Add `APIFY_API_TOKEN` to `.env.local` + Vercel env vars (blocks only
+  "Importar por URL" path; Modo Piloto theater doesn't need it)
+- Decide whether to invest half a day in Backstage autoplay UI loop
+  before Friday, or ship the solo-chat Backstage as is
 
 ### Blockers/Concerns
 
-- Plan 01-08 is `autonomous: false` — needs Vercel account wiring (ANTHROPIC_API_KEY, ANTHROPIC_MODEL, NEGOTIATION_ENABLED as env vars in Production + Preview) before execution.
-- ANTHROPIC_API_KEY in `.env.local` is required to actually exercise the negotiate route at dev time (route returns 500 'misconfigured' without it).
+- Backstage autoplay UI loop is the ONE remaining narrative gap.
+  Everything it needs (PF simulator endpoint, autoModeOpportunityIds
+  state, existing chat engine) is ready — the missing piece is a
+  sibling AutoplayBackstage component that runs negotiate→simulate-pf
+  in a loop. Estimated half-day of focused work.
 
 ## Deferred Items
 
