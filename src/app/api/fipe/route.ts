@@ -129,9 +129,14 @@ export async function POST(request: Request): Promise<Response> {
   if (modeloCandidates.length === 0) return genericError(404, { error: "not_found" });
 
   // Picking only the shortest name often maps to a trim that doesn't cover the
-  // requested ano. Probe candidates in parallel (preserving sort order) and
-  // pick the first-sorted one whose /anos covers the requested year. Parallel
-  // fan-out keeps latency ~1 upstream RTT even when scanning many trims.
+  // requested ano. Probe candidates in chunks with early-break: fan out
+  // CHUNK_SIZE fetches per wave and stop as soon as a chunk yields a year
+  // match. Pure Promise.all over 120 candidates saturates Vercel Edge's
+  // outbound connection pool under production latency — the 10s AbortSignal
+  // fires before most fetches settle and every candidate returns
+  // UPSTREAM_FAIL, producing a false-negative 404 for valid queries. Chunking
+  // keeps concurrency tractable while still resolving the common case in one
+  // upstream RTT (most marca+modelo+ano hits are in the first 10 candidates).
   //
   // The cap must be generous: popular marca+modelo pairs (e.g. Volkswagen + Gol)
   // produce 100+ boundary hits in Parallelum, and the shortest names skew toward
@@ -140,28 +145,34 @@ export async function POST(request: Request): Promise<Response> {
   // covers every marca's realistic modelo set without saturating upstream.
   const yearStr = String(body.ano);
   const MAX_MODELO_CANDIDATES = 120;
+  const CHUNK_SIZE = 10;
   const probeList = modeloCandidates.slice(0, MAX_MODELO_CANDIDATES);
-  const anosResults = await Promise.all(
-    probeList.map((candidate) =>
-      fetchJson(
-        `${PARALLELUM_BASE}/marcas/${encodeURIComponent(marcaMatch.codigo)}/modelos/${encodeURIComponent(String(candidate.codigo))}/anos`,
-        anosResponseSchema,
-        signal,
-      ),
-    ),
-  );
 
   let modeloMatch: (typeof modeloCandidates)[number] | null = null;
   let anoMatch: { codigo: string; nome: string } | null = null;
-  for (let i = 0; i < probeList.length; i++) {
-    const anosRes = anosResults[i];
-    if (isUpstreamFail(anosRes)) continue; // tolerate a subset of upstream errors
-    const anoMatches = anosRes.filter((a) => a.codigo.startsWith(`${yearStr}-`));
-    if (anoMatches.length > 0) {
-      modeloMatch = probeList[i];
-      anoMatch = anoMatches.find((a) => a.codigo.endsWith("-1")) ?? anoMatches[0];
-      break;
+
+  for (let start = 0; start < probeList.length; start += CHUNK_SIZE) {
+    const chunk = probeList.slice(start, start + CHUNK_SIZE);
+    const anosResults = await Promise.all(
+      chunk.map((candidate) =>
+        fetchJson(
+          `${PARALLELUM_BASE}/marcas/${encodeURIComponent(marcaMatch.codigo)}/modelos/${encodeURIComponent(String(candidate.codigo))}/anos`,
+          anosResponseSchema,
+          signal,
+        ),
+      ),
+    );
+    for (let i = 0; i < chunk.length; i++) {
+      const anosRes = anosResults[i];
+      if (isUpstreamFail(anosRes)) continue; // tolerate a subset of upstream errors
+      const anoMatches = anosRes.filter((a) => a.codigo.startsWith(`${yearStr}-`));
+      if (anoMatches.length > 0) {
+        modeloMatch = chunk[i];
+        anoMatch = anoMatches.find((a) => a.codigo.endsWith("-1")) ?? anoMatches[0];
+        break;
+      }
     }
+    if (modeloMatch) break;
   }
 
   if (!modeloMatch || !anoMatch) return genericError(404, { error: "not_found" });
