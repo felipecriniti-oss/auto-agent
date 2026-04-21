@@ -11,11 +11,18 @@
   --color-danger:  #DC2626;
   --color-accent:  #7C3AED;
 
+  /* AutoAgente brand (source: autoagente.ai landing) */
+  --color-brand:      #4C46DC;
+  --color-brand-soft: #EEEDFB;
+  --color-brand-dark: #2F2AA6;
+
   --radius: 0.5rem;
 
-  --font-sans: var(--font-sans);
+  --font-sans:    var(--font-geist, ui-sans-serif);
+  --font-display: var(--font-fraunces, Georgia, serif);
+  --font-mono:    var(--font-jetbrains-mono, ui-monospace);
 
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-fraunces, Georgia, serif);
 
   --color-sidebar-ring: var(--sidebar-ring);
 

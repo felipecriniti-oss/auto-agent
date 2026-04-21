@@ -1,15 +1,42 @@
 import type { Metadata } from "next";
+import { Fraunces, Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+  display: "swap",
+});
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  style: ["normal", "italic"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "AutoAgent Negotiation Playground",
-  description: "Chat manual funcional — Fase 1",
+  title: "AutoAgente — painel do lojista",
+  description: "Marketplace B2B de seminovos — 20 a 30% abaixo da FIPE. Piloto SP.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
-      <body className="min-h-screen bg-white text-slate-900 antialiased">{children}</body>
+    <html
+      lang="pt-BR"
+      className={`${geist.variable} ${fraunces.variable} ${jetbrainsMono.variable}`}
+    >
+      <body className="min-h-screen bg-background font-sans text-foreground antialiased">
+        {children}
+      </body>
     </html>
   );
 }
