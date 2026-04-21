@@ -41,6 +41,8 @@ export type DdStatus = "ok" | "review" | "blocked";
  */
 export type OpportunityStatus = "closed" | "pending";
 
+export type SellerType = "PF" | "PJ";
+
 export interface Opportunity {
   id: number;
   vehicle: string;
@@ -64,6 +66,22 @@ export interface Opportunity {
   margin: number;
   /** Defaults to `closed` when omitted (keeps legacy mock data untouched). */
   negotiationStatus?: OpportunityStatus;
+  /** Optional — photo URL from the scraped listing's photos array. If present,
+   * cards render the photo instead of the emoji in `img`. */
+  photoUrl?: string;
+  /** Optional — deep-link back to the source listing (e.g. WebMotors URL). */
+  listingUrl?: string;
+  /** Optional — PF/PJ flag from the scraped seller data. PF listings are
+   * the only relevant target for the agent (PJ = dealer). */
+  sellerType?: SellerType;
+  /** Optional — seller neighborhood (e.g. "Moema"), enriched from scrape. */
+  neighborhood?: string;
+  /** Optional — transmission ("Automática", "Manual"). */
+  transmission?: string;
+  /** Optional — body type ("Sedan", "Hatchback", "SUV", etc.). */
+  bodyType?: string;
+  /** Optional — listing optionals/features list ("Ar condicionado", ...). */
+  optionals?: string[];
 }
 
 export type DealStatus = "contrato_pendente" | "laudo_agendado" | "transferindo" | "finalizado";

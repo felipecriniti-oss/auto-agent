@@ -163,8 +163,17 @@ export default function BackstageModule(): React.JSX.Element {
         {/* Opportunity context strip */}
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <div className="flex items-start gap-4 flex-wrap lg:flex-nowrap">
-            <div className="w-16 h-14 rounded-lg bg-slate-100 flex items-center justify-center text-3xl border border-slate-200 flex-shrink-0">
-              {opp.img}
+            <div className="w-16 h-14 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden text-3xl border border-slate-200 flex-shrink-0">
+              {opp.photoUrl ? (
+                <img
+                  src={opp.photoUrl}
+                  alt={opp.vehicle}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                opp.img
+              )}
             </div>
             <div className="flex-1 min-w-0 space-y-1">
               <div className="flex items-center gap-2 flex-wrap">

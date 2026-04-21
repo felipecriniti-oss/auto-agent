@@ -1008,8 +1008,17 @@ function OpportunityCard({
       {/* Top stripe with vehicle hero */}
       <div className="flex items-start justify-between gap-4 bg-gradient-to-br from-slate-50 to-white p-5 pb-4">
         <div className="flex items-start gap-4 min-w-0 flex-1">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-white text-4xl shadow-sm ring-1 ring-inset ring-slate-200/70">
-            {opp.img}
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white text-4xl shadow-sm ring-1 ring-inset ring-slate-200/70">
+            {opp.photoUrl ? (
+              <img
+                src={opp.photoUrl}
+                alt={opp.vehicle}
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              opp.img
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex flex-wrap items-center gap-1.5">
@@ -1203,8 +1212,17 @@ function OpportunityDrawer({
         {/* Header */}
         <div className="flex items-start justify-between p-5 border-b border-slate-200">
           <div className="flex items-start gap-4">
-            <div className="w-16 h-14 rounded-lg bg-slate-100 flex items-center justify-center text-3xl border border-slate-200">
-              {opp.img}
+            <div className="w-16 h-14 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden text-3xl border border-slate-200">
+              {opp.photoUrl ? (
+                <img
+                  src={opp.photoUrl}
+                  alt={opp.vehicle}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                opp.img
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -1223,11 +1241,30 @@ function OpportunityDrawer({
                   <Palette size={11} /> {opp.color}
                 </span>
                 <span className="flex items-center gap-1">
-                  <MapPin size={11} /> {opp.location}
+                  <MapPin size={11} />{" "}
+                  {opp.neighborhood ? `${opp.neighborhood} · ${opp.location}` : opp.location}
                 </span>
+                {opp.transmission ? (
+                  <span className="flex items-center gap-1">⚙ {opp.transmission}</span>
+                ) : null}
+                {opp.sellerType ? (
+                  <Badge variant={opp.sellerType === "PF" ? "accent" : "default"} size="xs">
+                    {opp.sellerType}
+                  </Badge>
+                ) : null}
                 <span className="flex items-center gap-1 text-amber-600 font-medium">
                   <Timer size={11} /> Exclusividade: {opp.timeLeft}
                 </span>
+                {opp.listingUrl ? (
+                  <a
+                    href={opp.listingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[#4C46DC] hover:underline"
+                  >
+                    <Link2 size={11} /> Ver anúncio original
+                  </a>
+                ) : null}
               </div>
             </div>
           </div>

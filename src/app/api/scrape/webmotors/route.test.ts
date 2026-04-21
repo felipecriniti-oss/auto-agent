@@ -159,6 +159,98 @@ describe("POST /api/scrape/webmotors — success", () => {
   });
 });
 
+describe("POST /api/scrape/webmotors — field enrichment", () => {
+  it("maps neighborhood, photoUrl, listingUrl, sellerType, transmission, bodyType, optionals", async () => {
+    const publishDate = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse([
+          {
+            url: "https://www.webmotors.com.br/comprar/audi/a3/x",
+            title: "AUDI A3 SPORTBACK",
+            make: "Audi",
+            model: "A3",
+            version: "Sportback",
+            fabrication_year: 2023,
+            km: 20000,
+            price: 200000,
+            fipe_price: 250000,
+            fuel_type: "Gasolina",
+            color: "Cinza",
+            body_type: "Hatchback",
+            transmission: "Automática",
+            is_armored: false,
+            photos: [
+              "https://image.webmotors.com.br/photo1.jpg",
+              "https://image.webmotors.com.br/photo2.jpg",
+            ],
+            optionals: ["Teto solar", "Bancos em couro"],
+            attributes: ["Aceita troca"],
+            publish_date: publishDate,
+            seller: {
+              name: "Carla T.",
+              neighborhood: "Moema",
+              city: "São Paulo",
+              state: "São Paulo (SP)",
+              seller_type: "PF",
+            },
+          },
+        ]),
+      ),
+    );
+    const { POST } = await importRoute();
+    const res = await POST(makeRequest(validBody));
+    expect(res.status).toBe(200);
+    const { opportunity } = await res.json();
+    expect(opportunity.location).toBe("São Paulo, SP");
+    expect(opportunity.neighborhood).toBe("Moema");
+    expect(opportunity.photoUrl).toBe("https://image.webmotors.com.br/photo1.jpg");
+    expect(opportunity.listingUrl).toBe("https://www.webmotors.com.br/comprar/audi/a3/x");
+    expect(opportunity.sellerType).toBe("PF");
+    expect(opportunity.transmission).toBe("Automática");
+    expect(opportunity.bodyType).toBe("Hatchback");
+    expect(opportunity.optionals).toEqual(["Teto solar", "Bancos em couro"]);
+    // publish_date ~45 days ago → motivation signal "Anúncio há N dias"
+    expect(opportunity.motivationSignals.some((s: string) => /Anúncio há \d+ dias/.test(s))).toBe(
+      true,
+    );
+    // "Aceita troca" attribute lifted into motivation signals
+    expect(opportunity.motivationSignals).toContain("Aceita troca");
+    // PF sellers → ddStatus "review" (needs docs check before close)
+    expect(opportunity.ddStatus).toBe("review");
+    // Body type "Hatchback" → 🚗 emoji fallback for img
+    expect(opportunity.img).toBe("🚗");
+  });
+
+  it("marks PJ sellers as ddStatus=ok and picks SUV emoji for body_type", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse([
+          {
+            make: "Jeep",
+            model: "Compass",
+            fabrication_year: 2024,
+            km: 5000,
+            price: 180000,
+            fipe_price: 210000,
+            body_type: "SUV",
+            seller: { name: "Auto Center", city: "Curitiba", seller_type: "PJ" },
+          },
+        ]),
+      ),
+    );
+    const { POST } = await importRoute();
+    const res = await POST(makeRequest(validBody));
+    const { opportunity } = await res.json();
+    expect(opportunity.ddStatus).toBe("ok");
+    expect(opportunity.img).toBe("🚙");
+    expect(opportunity.sellerType).toBe("PJ");
+    expect(opportunity.location).toBe("Curitiba");
+  });
+});
+
 describe("POST /api/scrape/webmotors — Apify failures", () => {
   it("returns 502 scrape_failed when Apify returns non-404 HTTP error (no fallback)", async () => {
     vi.stubGlobal(

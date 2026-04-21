@@ -18,7 +18,7 @@
  * passed as a query-string arg, never echoed back by Apify into the JSON body.
  */
 
-import type { Opportunity, Source } from "@/lib/mock-data/v3";
+import type { Opportunity, SellerType, Source } from "@/lib/mock-data/v3";
 import { checkRateLimit } from "@/lib/server/rate-limit";
 import { z } from "zod";
 
@@ -45,6 +45,8 @@ interface WebMotorsScraped {
   url?: string;
   title?: string;
   vehicle_type?: string;
+  create_date?: string;
+  publish_date?: string;
   make?: string;
   model?: string;
   version?: string;
@@ -75,7 +77,7 @@ interface WebMotorsScraped {
     state?: string;
     zip_code?: string;
   };
-  // Tolerate unknown extra keys.
+  // Tolerate unknown extra keys — defensive in case the actor adds fields.
   [key: string]: unknown;
 }
 
@@ -269,17 +271,83 @@ function buildVehicleString(item: WebMotorsScraped): string {
   return "Veículo importado";
 }
 
+function extractUf(state: string | undefined): string | null {
+  if (!state) return null;
+  // "São Paulo (SP)" → "SP"
+  const withParens = state.match(/\(([A-Z]{2})\)/)?.[1];
+  if (withParens) return withParens;
+  // Already a UF like "SP"
+  if (/^[A-Z]{2}$/.test(state.trim())) return state.trim();
+  return null;
+}
+
 function buildLocation(item: WebMotorsScraped): string {
-  const city = item.seller?.city;
-  const state = item.seller?.state;
-  if (city && state) {
-    // Actor returns state like "São Paulo (SP)" — extract the UF if present
-    const uf = state.match(/\(([A-Z]{2})\)/)?.[1];
-    return uf ? `${city}, ${uf}` : `${city}, ${state}`;
-  }
+  const city = item.seller?.city?.trim();
+  const state = item.seller?.state?.trim();
+  const uf = extractUf(state);
+  if (city && uf) return `${city}, ${uf}`;
+  if (city && state) return `${city}, ${state}`;
   if (city) return city;
   if (state) return state;
   return "Localização não informada";
+}
+
+function pickBodyTypeEmoji(bodyType: string | undefined): string {
+  if (!bodyType) return "🚗";
+  const b = bodyType.toLowerCase();
+  if (b.includes("suv") || b.includes("utilitário")) return "🚙";
+  if (b.includes("picape") || b.includes("pickup")) return "🛻";
+  if (b.includes("hatch")) return "🚗";
+  if (b.includes("sedan")) return "🚘";
+  if (b.includes("cupê") || b.includes("coupe") || b.includes("esportivo")) return "🏎️";
+  if (b.includes("conversível") || b.includes("convertible")) return "🏎️";
+  if (b.includes("van") || b.includes("minivan")) return "🚐";
+  return "🚗";
+}
+
+function parseSellerType(raw: string | undefined): SellerType | undefined {
+  if (!raw) return undefined;
+  const up = raw.trim().toUpperCase();
+  if (up === "PF" || up === "PJ") return up;
+  return undefined;
+}
+
+function daysSince(dateStr: string | undefined): number | null {
+  if (!dateStr) return null;
+  const t = Date.parse(dateStr);
+  if (Number.isNaN(t)) return null;
+  const diffMs = Date.now() - t;
+  if (diffMs < 0) return 0;
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+}
+
+function buildMotivationSignals(item: WebMotorsScraped): string[] {
+  const signals: string[] = [];
+  // Days online from publish_date (fallback to create_date)
+  const days = daysSince(item.publish_date) ?? daysSince(item.create_date);
+  if (days !== null && days >= 14) {
+    signals.push(`Anúncio há ${days} dias`);
+  }
+  // "Aceita troca" is an attribute from the actor — keep it
+  if (Array.isArray(item.attributes)) {
+    for (const a of item.attributes) {
+      if (typeof a === "string" && /aceita\s*troca/i.test(a)) {
+        signals.push("Aceita troca");
+        break;
+      }
+    }
+  }
+  return signals;
+}
+
+function deriveDdStatus(item: WebMotorsScraped): "ok" | "review" | "blocked" {
+  // If the actor flagged the vehicle as armored, needs extra review.
+  if (item.is_armored === true) return "review";
+  // PF sellers need DD review by default (real docs check before deal close);
+  // PJ sellers come from dealers and can be auto-marked ok for the demo.
+  const type = parseSellerType(item.seller?.seller_type);
+  if (type === "PJ") return "ok";
+  return "review";
 }
 
 /**
@@ -309,6 +377,16 @@ function mapToOpportunity(item: WebMotorsScraped): Opportunity {
   const savings = fipe > 0 && dealPrice > 0 ? Math.max(0, fipe - dealPrice) : 0;
   const margin = fipe > 0 ? Math.round((savings / fipe) * 100) : 0;
   const sellerName = (typeof item.seller?.name === "string" && item.seller.name) || "Anunciante";
+  const sellerType = parseSellerType(item.seller?.seller_type);
+  const neighborhood = item.seller?.neighborhood?.trim() || undefined;
+  const photoUrl =
+    Array.isArray(item.photos) && typeof item.photos[0] === "string" ? item.photos[0] : undefined;
+  const listingUrl = typeof item.url === "string" ? item.url : undefined;
+  const bodyType = typeof item.body_type === "string" ? item.body_type : undefined;
+  const transmission = typeof item.transmission === "string" ? item.transmission : undefined;
+  const optionals = Array.isArray(item.optionals)
+    ? item.optionals.filter((s): s is string => typeof s === "string")
+    : undefined;
 
   const source: Source = "WebMotors";
 
@@ -325,15 +403,22 @@ function mapToOpportunity(item: WebMotorsScraped): Opportunity {
     score: computeScore(margin),
     location: buildLocation(item),
     sellerName,
-    img: "🚗",
+    img: pickBodyTypeEmoji(bodyType),
     color: typeof item.color === "string" ? item.color : "—",
     fuel: typeof item.fuel_type === "string" ? item.fuel_type : "—",
     rounds: 0,
-    motivationSignals: [],
-    ddStatus: "review",
+    motivationSignals: buildMotivationSignals(item),
+    ddStatus: deriveDdStatus(item),
     timeLeft: "7d 00h",
     source,
     negotiationStatus: "pending",
+    photoUrl,
+    listingUrl,
+    sellerType,
+    neighborhood,
+    transmission,
+    bodyType,
+    optionals: optionals && optionals.length > 0 ? optionals : undefined,
   };
 }
 
