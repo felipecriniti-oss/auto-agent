@@ -59,6 +59,7 @@ type ScoreFilter = 85 | 90 | 0;
 export default function MarketplaceModule(): React.JSX.Element {
   const opportunities = useAppStore((s) => s.opportunities);
   const currentPlan = useAppStore((s) => s.currentPlan);
+  const pilotStage = useAppStore((s) => s.pilotStage);
   const assumeDeal = useAppStore((s) => s.assumeDeal);
   const setActiveModule = useAppStore((s) => s.setActiveModule);
   const setActiveOpportunity = useAppStore((s) => s.setActiveOpportunity);
@@ -151,6 +152,25 @@ export default function MarketplaceModule(): React.JSX.Element {
           <HeaderStat value="7 dias" label="exclusividade sua" />
         </div>
       </header>
+
+      {/* Pilot status banner — appears while "Modo piloto" is running on the Dashboard */}
+      {pilotStage === "searching" && (
+        <div className="flex items-center gap-3 rounded-xl border border-[#4C46DC]/20 bg-[#4C46DC]/[0.04] px-4 py-3">
+          <div className="relative flex h-2.5 w-2.5 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4C46DC] opacity-75" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#4C46DC]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#4C46DC]">
+              Agente trabalhando
+            </div>
+            <div className="mt-0.5 text-[13px] text-slate-700">
+              Varrendo WebMotors, Mercado Livre e OLX em paralelo — novas oportunidades aparecem
+              aqui à medida que o agente fecha a negociação com o vendedor.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tier banner (starter → nudge) */}
       {currentPlan === "starter" && (
