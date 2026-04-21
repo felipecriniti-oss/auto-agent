@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 5 Round 3 complete, awaiting user review
-last_updated: "2026-04-22T03:00:00.000Z"
-last_activity: 2026-04-22 -- overnight autonomous sprint (signup + PF sim + modo piloto + visual polish rounds)
+stopped_at: Phase 5 day-of-demo push — autoplay loop + Apify enrichment + dark mode shipped 2026-04-21
+last_updated: "2026-04-21T15:30:00.000Z"
+last_activity: 2026-04-21 -- Backstage autoplay (agent vs PF sim) + ribtools scraper field expansion + next-themes dark mode
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 0
   total_plans: 23
-  completed_plans: 7
-  percent: 30
+  completed_plans: 10
+  percent: 43
 ---
 
 # Project State
@@ -40,11 +40,29 @@ Phase 1 chat engine (`/api/negotiate/stream`, Zustand store, ChatView, SummaryPa
 
 ## Current Position
 
-Phase: 5 of 5 (v3 Product Shell — pivot)
-Status: Round 3 complete (user reviewing on wake 2026-04-22)
-Last activity: 2026-04-22 03:00 BRT — overnight autonomous sprint completed 4 rounds
+Phase: 5 of 6 (v3 Product Shell — pivot)
+Status: Executing — demo push day. Core narrative now includes live agent ↔ PF simulator autoplay.
+Last activity: 2026-04-21 afternoon — autoplay + Apify enrichment + dark mode shipped
 
-**Overnight sprint summary (authorized by user before sleeping 2026-04-21):**
+**Today's (2026-04-21) shipped work, most recent first:**
+
+- `c8761df` — Dark mode via next-themes + CSS fallback layer (bg-white/
+  slate-*/text-slate-*/border-slate-* remapped in `.dark` scope, so no
+  per-component annotation needed for shell chrome). ThemeToggle in
+  Sidebar cycles light/dark/system.
+- `ca90fe7` — ribtools actor output fully mapped. Location fix (UF
+  extraction + whitespace trim), photoUrl from photos[0], listingUrl
+  deep-link, sellerType PF/PJ badge, neighborhood enrichment, auto
+  motivationSignals from publish_date + "Aceita troca" attribute,
+  ddStatus derived from PF/PJ + is_armored, emoji picked from body_type.
+  2 new scraper tests (12 passing total).
+- `04a60a8` — Backstage autoplay loop. Sibling AutoplayBackstage
+  component drives negotiate→simulate-pf in a closed loop with its own
+  message array (never touches Phase 1 chat store). Modo Piloto now
+  marks the 5 pilot opps autoplay so clicking through lands in live
+  theater. 14 new autoplay-helpers tests (202 passing total).
+
+**Overnight sprint summary (2026-04-21 overnight session):**
 
 - Round 1 (`685b76d`): fake-auth gate — SignupView with persona picker
   mapping to plan tiers; AppShell gates /app behind `onboardingComplete`
@@ -56,21 +74,19 @@ Last activity: 2026-04-22 03:00 BRT — overnight autonomous sprint completed 4 
 - Round 3 (`631ab6e`): visual polish — Dashboard KPI hero + trend
   strip, Backstage editorial header, MyDeals Fraunces treatment
 
-See `.planning/phases/05-v3-pivot/OVERNIGHT-PROGRESS.md` for the full
-read-in-the-morning summary, including:
-- What's NOT done (Backstage autoplay UI loop — simulator endpoint is
-  ready but BackstageModule wasn't wired to loop through it; half-day
-  of work remaining; has suggested architecture to avoid touching the
-  Phase 1 chat code)
-- Manual test sequence to run on wake
+See `.planning/phases/05-v3-pivot/OVERNIGHT-PROGRESS.md` (session
+snapshot pre-autoplay) and `.planning/phases/05-v3-pivot/05-CONTEXT.md`
+(decisions log) for the full picture.
 
 Deferred phases:
 - Phase 2 (Inteligência do Agente) — 7 plans planned, 0 executed. Resume after v3 shell stable.
-- Phase 3 (PF Simulado e Batch) — TBD plans. Deferred.
+- Phase 3 (PF Simulado e Batch) — superseded in spirit by /api/simulate-pf
+  + AutoplayBackstage; formal batch runner still deferred.
 - Phase 4 (Análise, Export e A/B) — TBD plans. Deferred.
 - **Phase 6 (Supabase auth + DB + Stripe billing)** — SEEDED 2026-04-21. Trigger: after Felipe signs off Phase 5 demo on 2026-04-24. Estimated start 2026-04-28. See `.planning/phases/06-supabase-integration/06-PHASE-SEED.md`. Scope: multi-tenant auth, Postgres schema, RLS, Zustand-to-Supabase migration, Stripe Checkout + webhooks. User chose this Option-1 path on 2026-04-21 to protect the Friday demo delivery window.
 
-Progress: [███░░░░░░░] 30% (7 plans done / 23 estimated)
+Progress: [████░░░░░░] 43% (10 plans done / 23 estimated — Phase 1: 7/8,
+Phase 5: Wave 0-2 + autoplay + enrichment + dark mode)
 
 ## Performance Metrics
 

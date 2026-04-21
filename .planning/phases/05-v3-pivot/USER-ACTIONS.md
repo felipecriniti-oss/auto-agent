@@ -63,17 +63,38 @@ A rota `/api/scrape/webmotors` lê o token do env `APIFY_API_TOKEN` (exato, case
 
 ---
 
-## Status (atualizado conforme avançamos)
+## Status (atualizado 2026-04-21 tarde)
 
-- [x] FIPE autofetch — fix deployado 2026-04-21 (commit `75b3177`). Testa daqui a ~2min na URL atual.
+### Concluído (código, testado, deployado na Vercel)
+
+- [x] FIPE autofetch fix (`75b3177`)
 - [x] Pivot documentado (CLAUDE.md, PROJECT.md, STATE.md, Phase 5 plan)
-- [ ] Wave 0 shell — em execução (subagent worktree)
-- [ ] Wave 1 módulos (Marketplace, Dashboard, MyDeals, Settings, Radar)
-- [ ] Wave 2 Backstage + Apify
-- [ ] Wave 3 Polish + deploy autoagente.ai
-- [ ] User: DNS autoagente.ai no Vercel
-- [ ] User: Apify API token
+- [x] Wave 0 shell (AppShell + Sidebar + Zustand store + v3 UI primitives)
+- [x] Wave 1 módulos (Marketplace + Dashboard + MyDeals + Settings + Radar)
+- [x] Wave 2 Backstage solo chat + Apify on-demand por URL (ribtools scraper)
+- [x] SignupView fake-auth gate com persona picker
+- [x] Modo Piloto (drip-feed 5 opps teatral) + /api/simulate-pf endpoint
+- [x] Backstage autoplay loop (agente ↔ PF sim, commit `04a60a8`)
+- [x] ribtools scraper com todos os campos (location, fotos, PF/PJ, motivação, commit `ca90fe7`)
+- [x] Dark mode via next-themes + ThemeToggle no Sidebar (commit `c8761df`)
+
+### Pendente do código (Wave 3 final)
+
+- [ ] Onboarding/primeiros passos pós-signup (polish)
+- [ ] Mobile responsive QA pass
+- [ ] End-to-end smoke test (clear localStorage → signup → Modo Piloto → click opp → autoplay → Assumir Deal)
+
+### Pendente do usuário (bloqueio para demo de sexta)
+
+- [ ] **DNS autoagente.ai** apontando para Vercel (A record `76.76.21.21` no apex, CNAME `cname.vercel-dns.com` em `www`). 2-3 min no painel do registrar. **Sem isso o domínio não abre.**
+- [ ] **APIFY_API_TOKEN** no Vercel (Production + Preview + Development). **Sem isso o botão "Importar por URL" 500a** — não bloqueia Modo Piloto mas bloqueia demo de scraping real.
+- [ ] **ANTHROPIC_API_KEY** + **NEGOTIATION_ENABLED=true** no Vercel — verificar se já estão (muito provável que sim, mas double-check antes de sexta).
+
+### Opcional (quinta-feira se sobrar tempo)
+
+- [ ] DigitalOcean App Platform como staging.autoagente.ai
+  (best-effort, Vercel sozinho cobre a demo)
 
 ---
 
-**Prioridade das actions:** DNS (1) > Apify (2) > DO (3).
+**Prioridade das actions:** DNS (1) > Apify token (2) > DO (3).
