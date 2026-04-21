@@ -47,3 +47,9 @@ next-env.d.ts
 
 # coverage (vitest / istanbul)
 coverage/
+
+# Claude Code worktrees — temporary sandboxes for background subagents
+.claude/worktrees/
+
+# build debug logs
+build.log
