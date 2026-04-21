@@ -49,6 +49,7 @@ Deferred phases:
 - Phase 2 (Inteligência do Agente) — 7 plans planned, 0 executed. Resume after v3 shell stable.
 - Phase 3 (PF Simulado e Batch) — TBD plans. Deferred.
 - Phase 4 (Análise, Export e A/B) — TBD plans. Deferred.
+- **Phase 6 (Supabase auth + DB + Stripe billing)** — SEEDED 2026-04-21. Trigger: after Felipe signs off Phase 5 demo on 2026-04-24. Estimated start 2026-04-28. See `.planning/phases/06-supabase-integration/06-PHASE-SEED.md`. Scope: multi-tenant auth, Postgres schema, RLS, Zustand-to-Supabase migration, Stripe Checkout + webhooks. User chose this Option-1 path on 2026-04-21 to protect the Friday demo delivery window.
 
 Progress: [███░░░░░░░] 30% (7 plans done / 23 estimated)
 
