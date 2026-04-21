@@ -1,5 +1,6 @@
 "use client";
 
+import { Toaster } from "@/components/ui/sonner";
 import { useAppStore } from "@/lib/stores/app";
 import type { AppModule } from "@/lib/stores/app";
 import type { ComponentType } from "react";
@@ -36,6 +37,7 @@ export default function AppShell() {
       <main className="flex-1 overflow-x-hidden">
         <ActiveComponent />
       </main>
+      <Toaster richColors position="top-right" />
     </div>
   );
 }
