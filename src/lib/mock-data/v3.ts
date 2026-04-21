@@ -27,6 +27,20 @@ export type Source = "WebMotors" | "Mercado Livre" | "OLX";
 
 export type DdStatus = "ok" | "review" | "blocked";
 
+/**
+ * State of an opportunity in the lojista's pipeline.
+ *
+ * - `closed`: agent has already negotiated price + exclusivity with the seller.
+ *   Mock opportunities and pilot-mode opps default here. The card renders
+ *   "Fechado pelo agente" with the deal price and savings vs FIPE.
+ * - `pending`: raw listing brought in via URL scrape or manual entry. No
+ *   negotiation has happened yet — the price shown is the seller's ask. The
+ *   card shows "Preço anunciado" and frames margin as "Potencial vs FIPE".
+ *   User must click "Iniciar negociação" (opens Backstage) to turn it into
+ *   a closed deal.
+ */
+export type OpportunityStatus = "closed" | "pending";
+
 export interface Opportunity {
   id: number;
   vehicle: string;
@@ -48,6 +62,8 @@ export interface Opportunity {
   timeLeft: string;
   source: Source;
   margin: number;
+  /** Defaults to `closed` when omitted (keeps legacy mock data untouched). */
+  negotiationStatus?: OpportunityStatus;
 }
 
 export type DealStatus = "contrato_pendente" | "laudo_agendado" | "transferindo" | "finalizado";

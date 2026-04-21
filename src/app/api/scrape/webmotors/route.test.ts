@@ -113,19 +113,22 @@ describe("POST /api/scrape/webmotors — success", () => {
         jsonResponse([
           {
             url: validBody.url,
-            marca: "Volkswagen",
-            modelo: "Gol 1.6",
-            trim: "MSI",
-            ano: 2020,
+            title: "VOLKSWAGEN GOL 1.6 MSI",
+            make: "Volkswagen",
+            model: "Gol",
+            version: "1.6 MSI",
+            fabrication_year: 2020,
+            model_year: 2020,
             km: 45000,
-            precoPedido: 52000,
-            cidade: "Campinas",
-            uf: "SP",
-            sellerName: "João S.",
-            diasOnline: 80,
-            reducoes: 3,
-            cor: "Prata",
-            combustivel: "Flex",
+            price: 52000,
+            fipe_price: 65000,
+            fuel_type: "Flex",
+            color: "Prata",
+            seller: {
+              name: "João S.",
+              city: "Campinas",
+              state: "São Paulo (SP)",
+            },
           },
         ]),
       ),
@@ -139,18 +142,20 @@ describe("POST /api/scrape/webmotors — success", () => {
       year: 2020,
       km: 45000,
       dealPrice: 52000,
+      fipe: 65000,
       location: "Campinas, SP",
       sellerName: "João S.",
       source: "WebMotors",
       timeLeft: "7d 00h",
+      fuel: "Flex",
+      color: "Prata",
+      negotiationStatus: "pending",
     });
-    expect(data.opportunity.motivationSignals).toContain("80 dias online");
-    expect(data.opportunity.motivationSignals).toContain("3 reduções de preço");
-    // FIPE-dependent fields are intentionally absent — client fills them after FIPE lookup.
-    expect(data.opportunity.fipe).toBeUndefined();
-    expect(data.opportunity.savings).toBeUndefined();
-    expect(data.opportunity.fee).toBeUndefined();
-    expect(data.opportunity.margin).toBeUndefined();
+    // FIPE-derived fields now come straight from the actor, computed server-side.
+    expect(data.opportunity.savings).toBe(13000); // 65000 - 52000
+    expect(data.opportunity.margin).toBe(20); // 13000/65000 = 0.2
+    // Fee is still plan-dependent; the client fills this via calcFee.
+    expect(data.opportunity.fee).toBe(0);
   });
 });
 

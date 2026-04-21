@@ -36,30 +36,46 @@ const WEBMOTORS_HOST_RE = /(^|\.)webmotors\.com\.br$/i;
 // ─── Apify types — these describe what the actor dataset returns. ──
 
 /**
- * Minimal shape we rely on from Apify — both the dedicated WebMotors actor and
- * the generic web-scraper pageFunction fallback conform to this.
- * All fields are optional because scrapers degrade gracefully (missing fields
- * on a listing are common).
+ * Shape returned by the ribtools/webmotors-scraper actor (verified against its
+ * public readme example output). All fields optional — the actor can skip
+ * fields if a listing doesn't expose them.
  */
 interface WebMotorsScraped {
+  id?: number;
   url?: string;
-  marca?: string;
-  modelo?: string;
-  trim?: string;
-  ano?: number;
-  anoModelo?: number;
+  title?: string;
+  vehicle_type?: string;
+  make?: string;
+  model?: string;
+  version?: string;
+  fabrication_year?: number;
+  model_year?: number;
   km?: number;
-  precoPedido?: number;
-  preco?: number;
-  cidade?: string;
-  uf?: string;
-  sellerName?: string;
-  vendedor?: string;
-  diasOnline?: number;
-  reducoes?: number;
-  cor?: string;
-  combustivel?: string;
-  // Tolerate unknown extra keys — Apify actors often ship extras.
+  transmission?: string;
+  fuel_type?: string;
+  body_type?: string;
+  final_plate?: string;
+  is_armored?: boolean;
+  price?: number;
+  fipe_price?: number;
+  color?: string;
+  number_of_doors?: number;
+  optionals?: string[];
+  attributes?: string[];
+  photos?: string[];
+  view_360_url?: string;
+  seller?: {
+    id?: number;
+    name?: string;
+    cnpj?: string;
+    phones?: string[];
+    seller_type?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+    zip_code?: string;
+  };
+  // Tolerate unknown extra keys.
   [key: string]: unknown;
 }
 
@@ -241,93 +257,83 @@ async function callApifyActor(
 // ─── Opportunity mapping ───────────────────────────────────────────
 
 function buildVehicleString(item: WebMotorsScraped): string {
-  const parts = [item.marca, item.modelo, item.trim].filter(
-    (p): p is string => typeof p === "string" && p.trim().length > 0,
-  );
-  if (parts.length === 0 && typeof item.title === "string") {
-    return item.title;
-  }
-  return parts.join(" ").trim() || "Veículo importado";
+  const make = typeof item.make === "string" ? item.make : "";
+  const model = typeof item.model === "string" ? item.model : "";
+  const version = typeof item.version === "string" ? item.version : "";
+  const composed = [make, model, version]
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .join(" ");
+  if (composed.length > 0) return composed;
+  if (typeof item.title === "string" && item.title.trim().length > 0) return item.title;
+  return "Veículo importado";
 }
 
 function buildLocation(item: WebMotorsScraped): string {
-  const cidade = typeof item.cidade === "string" ? item.cidade : null;
-  const uf = typeof item.uf === "string" ? item.uf : null;
-  if (cidade && uf) return `${cidade}, ${uf}`;
-  if (cidade) return cidade;
-  if (uf) return uf;
+  const city = item.seller?.city;
+  const state = item.seller?.state;
+  if (city && state) {
+    // Actor returns state like "São Paulo (SP)" — extract the UF if present
+    const uf = state.match(/\(([A-Z]{2})\)/)?.[1];
+    return uf ? `${city}, ${uf}` : `${city}, ${state}`;
+  }
+  if (city) return city;
+  if (state) return state;
   return "Localização não informada";
 }
 
-function buildMotivationSignals(item: WebMotorsScraped): string[] {
-  const signals: string[] = [];
-  if (typeof item.diasOnline === "number" && item.diasOnline > 0) {
-    signals.push(`${item.diasOnline} dias online`);
-  }
-  if (typeof item.reducoes === "number" && item.reducoes > 0) {
-    signals.push(`${item.reducoes} reduções de preço`);
-  }
-  return signals;
+/**
+ * Score combines the realised margin (price vs fipe) with a small baseline.
+ * The higher the margin, the higher the "opportunity" score — same heuristic
+ * as the pre-negotiated mock data.
+ */
+function computeScore(margin: number): number {
+  if (margin >= 25) return 94;
+  if (margin >= 20) return 90;
+  if (margin >= 15) return 85;
+  if (margin >= 10) return 80;
+  if (margin >= 5) return 75;
+  return 70;
 }
 
-/**
- * Rough score heuristic — the UI can refine once FIPE is fetched client-side,
- * but we still want a sensible initial value so the card looks populated.
- * We can't compare to FIPE yet (FIPE is resolved on the client post-scrape),
- * so fall back to signal-based scoring.
- */
-function crudeScore(item: WebMotorsScraped): number {
-  let score = 70;
-  if (typeof item.diasOnline === "number" && item.diasOnline >= 60) score += 10;
-  if (typeof item.reducoes === "number" && item.reducoes >= 2) score += 10;
-  if (typeof item.precoPedido === "number" && item.precoPedido > 0) score += 5;
-  return Math.min(95, score);
-}
-
-/**
- * Partial Opportunity shape produced by the scrape. FIPE / savings / fee /
- * margin intentionally omitted — the client fills those in after POST /api/fipe.
- */
-export type ScrapedOpportunity = Omit<Opportunity, "fipe" | "savings" | "fee" | "margin">;
-
-function mapToOpportunity(item: WebMotorsScraped): ScrapedOpportunity {
-  const ano =
-    typeof item.ano === "number"
-      ? item.ano
-      : typeof item.anoModelo === "number"
-        ? item.anoModelo
+function mapToOpportunity(item: WebMotorsScraped): Opportunity {
+  const year =
+    typeof item.fabrication_year === "number"
+      ? item.fabrication_year
+      : typeof item.model_year === "number"
+        ? item.model_year
         : 0;
   const km = typeof item.km === "number" ? item.km : 0;
-  const dealPrice =
-    typeof item.precoPedido === "number"
-      ? item.precoPedido
-      : typeof item.preco === "number"
-        ? item.preco
-        : 0;
-  const sellerName =
-    (typeof item.sellerName === "string" && item.sellerName) ||
-    (typeof item.vendedor === "string" && item.vendedor) ||
-    "Anunciante";
+  const dealPrice = typeof item.price === "number" ? item.price : 0;
+  const fipe = typeof item.fipe_price === "number" ? item.fipe_price : 0;
+  const savings = fipe > 0 && dealPrice > 0 ? Math.max(0, fipe - dealPrice) : 0;
+  const margin = fipe > 0 ? Math.round((savings / fipe) * 100) : 0;
+  const sellerName = (typeof item.seller?.name === "string" && item.seller.name) || "Anunciante";
 
   const source: Source = "WebMotors";
 
   return {
     id: Date.now(),
     vehicle: buildVehicleString(item),
-    year: ano,
+    year,
     km,
     dealPrice,
-    score: crudeScore(item),
+    fipe,
+    savings,
+    fee: 0, // Fee is plan-dependent; the client fills this in via calcFee().
+    margin,
+    score: computeScore(margin),
     location: buildLocation(item),
     sellerName,
     img: "🚗",
-    color: typeof item.cor === "string" ? item.cor : "—",
-    fuel: typeof item.combustivel === "string" ? item.combustivel : "—",
+    color: typeof item.color === "string" ? item.color : "—",
+    fuel: typeof item.fuel_type === "string" ? item.fuel_type : "—",
     rounds: 0,
-    motivationSignals: buildMotivationSignals(item),
+    motivationSignals: [],
     ddStatus: "review",
     timeLeft: "7d 00h",
     source,
+    negotiationStatus: "pending",
   };
 }
 

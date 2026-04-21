@@ -422,8 +422,27 @@ function ImportUrlDialog({ onClose, currentPlan }: ImportUrlDialogProps): React.
         }
         return;
       }
-      const data = (await res.json()) as { opportunity: ScrapedOpportunity };
-      setStep({ kind: "preview", opp: data.opportunity });
+      // The ribtools actor returns a fully-hydrated Opportunity including
+      // fipe_price — the server-side mapToOpportunity already fills fipe /
+      // savings / margin. If those are all present, skip the preview-then-
+      // FIPE-lookup dance and drop the opp straight into the Marketplace.
+      const data = (await res.json()) as { opportunity: Opportunity };
+      const full = data.opportunity;
+      if (full.fipe > 0 && full.dealPrice > 0) {
+        const feePayable = calcFee(full.savings, currentPlan);
+        addOpportunity({ ...full, fee: feePayable });
+        toast.success("Anúncio importado!", {
+          description: `${full.vehicle} · ${full.margin}% abaixo da FIPE · aguardando agente iniciar negociação.`,
+        });
+        onClose();
+        return;
+      }
+      // Fallback: partial scrape (fipe missing) → fall back to the old
+      // preview + FIPE lookup flow using the ScrapedOpportunity shape.
+      setStep({
+        kind: "preview",
+        opp: full as unknown as ScrapedOpportunity,
+      });
     } catch (err) {
       setStep({ kind: "input" });
       setError(`Erro de rede: ${(err as Error).message}`);
@@ -1031,31 +1050,67 @@ function OpportunityCard({
       {/* Price + savings block */}
       <div className="flex items-end justify-between gap-3 border-t border-slate-100 px-5 py-4">
         <div className="min-w-0">
-          <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-            Fechado pelo agente
+          <div
+            className={`font-mono text-[10px] font-semibold uppercase tracking-[0.18em] ${
+              opp.negotiationStatus === "pending" ? "text-amber-600" : "text-slate-400"
+            }`}
+          >
+            {opp.negotiationStatus === "pending" ? "Preço anunciado" : "Fechado pelo agente"}
           </div>
           <div className="mt-0.5 font-mono text-[28px] font-semibold leading-none tracking-tight text-slate-900">
             R$ {opp.dealPrice.toLocaleString("pt-BR")}
           </div>
           <div className="mt-1 font-mono text-[11px] text-slate-400">
-            FIPE <span className="line-through">R$ {opp.fipe.toLocaleString("pt-BR")}</span>
+            FIPE{" "}
+            <span className={opp.negotiationStatus === "pending" ? "" : "line-through"}>
+              R$ {opp.fipe.toLocaleString("pt-BR")}
+            </span>
           </div>
         </div>
-        <div className="shrink-0 rounded-xl bg-emerald-50 px-3 py-2 text-right ring-1 ring-inset ring-emerald-100">
-          <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700/70">
-            vs FIPE
-          </div>
+        {opp.fipe > 0 && (
           <div
-            className="font-semibold leading-none text-emerald-700 italic"
-            style={{ fontFamily: "var(--font-fraunces, Georgia, serif)", fontSize: "22px" }}
+            className={`shrink-0 rounded-xl px-3 py-2 text-right ring-1 ring-inset ${
+              opp.negotiationStatus === "pending"
+                ? "bg-amber-50 ring-amber-100"
+                : "bg-emerald-50 ring-emerald-100"
+            }`}
           >
-            −{opp.margin}%
+            <div
+              className={`font-mono text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                opp.negotiationStatus === "pending" ? "text-amber-700/70" : "text-emerald-700/70"
+              }`}
+            >
+              {opp.negotiationStatus === "pending" ? "Potencial · FIPE" : "vs FIPE"}
+            </div>
+            <div
+              className={`font-semibold leading-none italic ${
+                opp.negotiationStatus === "pending" ? "text-amber-700" : "text-emerald-700"
+              }`}
+              style={{ fontFamily: "var(--font-fraunces, Georgia, serif)", fontSize: "22px" }}
+            >
+              −{opp.margin}%
+            </div>
+            <div
+              className={`mt-1 font-mono text-[10px] ${
+                opp.negotiationStatus === "pending" ? "text-amber-700/80" : "text-emerald-700/80"
+              }`}
+            >
+              −R$ {opp.savings.toLocaleString("pt-BR")}
+            </div>
           </div>
-          <div className="mt-1 font-mono text-[10px] text-emerald-700/80">
-            −R$ {opp.savings.toLocaleString("pt-BR")}
-          </div>
-        </div>
+        )}
       </div>
+
+      {/* Pending-state banner — visible only when negotiation hasn't happened yet */}
+      {opp.negotiationStatus === "pending" && (
+        <div className="flex items-center gap-2 border-t border-amber-100 bg-amber-50/60 px-5 py-2 text-[11px] text-amber-800">
+          <Timer size={12} />
+          <span>
+            Aguardando agente iniciar negociação com o vendedor · clique em "Ver detalhes" pra abrir
+            Backstage
+          </span>
+        </div>
+      )}
 
       {/* Context row */}
       <div className="flex items-center gap-x-3 gap-y-1 border-t border-slate-100 px-5 py-3 text-[11px] text-slate-500">
