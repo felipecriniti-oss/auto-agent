@@ -21,6 +21,8 @@ import {
   Clock,
   Eye,
   Gauge,
+  Link2,
+  Loader2,
   MapPin,
   MessageSquare,
   Palette,
@@ -35,6 +37,20 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+
+/**
+ * Partial Opportunity returned by /api/scrape/webmotors — fipe/savings/fee/
+ * margin are filled client-side after /api/fipe lookup.
+ */
+type ScrapedOpportunity = Omit<Opportunity, "fipe" | "savings" | "fee" | "margin">;
+
+type ImportStep =
+  | { kind: "input" }
+  | { kind: "scraping" }
+  | { kind: "preview"; opp: ScrapedOpportunity }
+  | { kind: "fipe_loading"; opp: ScrapedOpportunity }
+  | { kind: "fipe_manual"; opp: ScrapedOpportunity }
+  | { kind: "saving"; opp: ScrapedOpportunity; fipe: number };
 
 type SourceFilter = Source | "all";
 type MarginFilter = 20 | 25 | 0;
@@ -221,52 +237,371 @@ export default function MarketplaceModule(): React.JSX.Element {
         />
       )}
 
-      {/* Import URL stub dialog */}
+      {/* Import URL dialog — real flow (scrape → fipe → addOpportunity) */}
       {showImportDialog && (
-        <div
-          className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4"
-          onClick={() => setShowImportDialog(false)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setShowImportDialog(false);
-          }}
-          // biome-ignore lint/a11y/useSemanticElements: overlay div — the semantic dialog lives inside this backdrop
-          role="dialog"
-          aria-modal="true"
-          aria-label="Importar por URL"
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-            role="document"
+        <ImportUrlDialog onClose={() => setShowImportDialog(false)} currentPlan={currentPlan} />
+      )}
+    </div>
+  );
+}
+
+// ─── Import URL dialog ──────────────────────────────────────────
+//
+// Two-step flow:
+//   1. User pastes WebMotors URL → POST /api/scrape/webmotors (10-30s)
+//   2. Preview card appears → user clicks "Buscar FIPE e adicionar" →
+//      POST /api/fipe → enriches opp with fipe/savings/fee/margin →
+//      addOpportunity → dialog closes + toast.
+//
+// If FIPE returns 404, user gets a manual-input field and can type the
+// FIPE value themselves. Other errors keep the dialog open with an inline
+// error banner and allow retry.
+
+interface ImportUrlDialogProps {
+  onClose: () => void;
+  currentPlan: import("@/lib/mock-data/v3").PlanKey;
+}
+
+function isWebMotorsUrl(raw: string): boolean {
+  try {
+    const parsed = new URL(raw);
+    return /(^|\.)webmotors\.com\.br$/i.test(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function extractBrandModelForFipe(vehicle: string): { marca: string; modelo: string } | null {
+  const parts = vehicle.trim().split(/\s+/);
+  if (parts.length < 2) return null;
+  return { marca: parts[0], modelo: parts.slice(1).join(" ") };
+}
+
+function ImportUrlDialog({ onClose, currentPlan }: ImportUrlDialogProps): React.JSX.Element {
+  const addOpportunity = useAppStore((s) => s.addOpportunity);
+
+  const [url, setUrl] = useState("");
+  const [step, setStep] = useState<ImportStep>({ kind: "input" });
+  const [error, setError] = useState<string | null>(null);
+  const [manualFipe, setManualFipe] = useState("");
+
+  const busy = step.kind === "scraping" || step.kind === "fipe_loading" || step.kind === "saving";
+
+  const closeIfIdle = (): void => {
+    if (!busy) onClose();
+  };
+
+  const handleScrape = async (): Promise<void> => {
+    setError(null);
+    if (!isWebMotorsUrl(url)) {
+      setError("URL inválida — só WebMotors (webmotors.com.br) é suportado nesta versão.");
+      return;
+    }
+    setStep({ kind: "scraping" });
+    try {
+      const res = await fetch("/api/scrape/webmotors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+        setStep({ kind: "input" });
+        if (res.status === 429) {
+          setError("Muitas tentativas — aguarde 1 minuto e tente novamente.");
+        } else if (res.status === 504 || data.error === "scrape_timeout") {
+          setError("Timeout no scraping — o WebMotors pode estar lento. Tente novamente.");
+        } else if (data.error === "apify_token_missing") {
+          setError("APIFY_API_TOKEN não configurado no servidor. Avise o admin.");
+        } else if (data.error === "only_webmotors_supported") {
+          setError("Só WebMotors é suportado nesta versão.");
+        } else {
+          setError(`Falha no scraping (${data.error ?? res.status}). Tente novamente.`);
+        }
+        return;
+      }
+      const data = (await res.json()) as { opportunity: ScrapedOpportunity };
+      setStep({ kind: "preview", opp: data.opportunity });
+    } catch (err) {
+      setStep({ kind: "input" });
+      setError(`Erro de rede: ${(err as Error).message}`);
+    }
+  };
+
+  const finalizeWithFipe = (opp: ScrapedOpportunity, fipe: number): void => {
+    const savings = Math.max(0, fipe - opp.dealPrice);
+    const fee = calcFee(savings, currentPlan);
+    const margin = fipe > 0 ? Math.round((savings / fipe) * 100) : 0;
+    const finalOpp: Opportunity = {
+      ...opp,
+      fipe,
+      savings,
+      fee,
+      margin,
+    };
+    addOpportunity(finalOpp);
+    toast.success("Oportunidade adicionada!", {
+      description: `${finalOpp.vehicle} — economia estimada R$ ${savings.toLocaleString("pt-BR")}.`,
+    });
+    onClose();
+  };
+
+  const handleFipeLookup = async (opp: ScrapedOpportunity): Promise<void> => {
+    setError(null);
+    const bm = extractBrandModelForFipe(opp.vehicle);
+    if (!bm || !opp.year) {
+      setStep({ kind: "fipe_manual", opp });
+      return;
+    }
+    setStep({ kind: "fipe_loading", opp });
+    try {
+      const res = await fetch("/api/fipe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ marca: bm.marca, modelo: bm.modelo, ano: opp.year }),
+      });
+      if (res.status === 404) {
+        setStep({ kind: "fipe_manual", opp });
+        setError("FIPE não encontrou o modelo — informe o valor manualmente.");
+        return;
+      }
+      if (!res.ok) {
+        setStep({ kind: "fipe_manual", opp });
+        setError(`FIPE indisponível (${res.status}) — informe o valor manualmente.`);
+        return;
+      }
+      const data = (await res.json()) as { fipe: number };
+      setStep({ kind: "saving", opp, fipe: data.fipe });
+      finalizeWithFipe(opp, data.fipe);
+    } catch (err) {
+      setStep({ kind: "fipe_manual", opp });
+      setError(`Erro na consulta FIPE: ${(err as Error).message}`);
+    }
+  };
+
+  const handleManualFipeSubmit = (opp: ScrapedOpportunity): void => {
+    const parsed = Number(manualFipe.replace(/[^0-9]/g, ""));
+    if (!parsed || parsed < 1000) {
+      setError("Valor FIPE inválido — informe um número maior que R$ 1.000.");
+      return;
+    }
+    setStep({ kind: "saving", opp, fipe: parsed });
+    finalizeWithFipe(opp, parsed);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4"
+      onClick={closeIfIdle}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") closeIfIdle();
+      }}
+      // biome-ignore lint/a11y/useSemanticElements: overlay div — the semantic dialog lives inside this backdrop
+      role="dialog"
+      aria-modal="true"
+      aria-label="Importar por URL"
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        role="document"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <Sparkles size={20} className="text-blue-600" /> Importar por URL
+          </h3>
+          <button
+            type="button"
+            onClick={closeIfIdle}
+            className="text-slate-400 hover:text-slate-600 disabled:opacity-40"
+            aria-label="Fechar"
+            disabled={busy}
           >
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Sparkles size={20} className="text-blue-600" /> Importar por URL
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowImportDialog(false)}
-                className="text-slate-400 hover:text-slate-600"
-                aria-label="Fechar"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 text-sm text-violet-800">
-              <strong>Apify em breve — Wave 2.</strong> Cole um anúncio de WebMotors / Mercado Livre
-              / OLX e o agente irá raspar, enriquecer via FIPE e iniciar negociação automaticamente.
-            </div>
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Step: input */}
+        {step.kind === "input" && (
+          <div className="space-y-3">
+            <label className="block">
+              <span className="text-xs font-semibold text-slate-600 uppercase">
+                URL do WebMotors
+              </span>
+              <div className="mt-1 flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-2 focus-within:border-blue-400">
+                <Link2 size={16} className="text-slate-400 flex-shrink-0" />
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://www.webmotors.com.br/comprar/..."
+                  className="flex-1 text-sm outline-none bg-transparent"
+                />
+              </div>
+            </label>
+            <p className="text-xs text-slate-500">
+              Cole a URL do anúncio do WebMotors. O agente extrai os dados do veículo e consulta a
+              FIPE automaticamente.
+            </p>
+            {error && <InlineError message={error} />}
             <button
               type="button"
-              onClick={() => setShowImportDialog(false)}
-              className="w-full mt-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold"
+              onClick={handleScrape}
+              disabled={!url.trim()}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2"
             >
-              Entendi
+              <Sparkles size={14} /> Importar
             </button>
           </div>
+        )}
+
+        {/* Step: scraping */}
+        {step.kind === "scraping" && (
+          <StepProgress
+            icon={<Loader2 size={18} className="animate-spin" />}
+            title="Escaneando WebMotors…"
+            description="Isso pode levar entre 10 e 30 segundos — o Apify boota uma instância headless para raspar o anúncio."
+          />
+        )}
+
+        {/* Step: preview scraped opp */}
+        {step.kind === "preview" && (
+          <PreviewCard opp={step.opp} onConfirm={() => handleFipeLookup(step.opp)}>
+            {error && <InlineError message={error} />}
+          </PreviewCard>
+        )}
+
+        {/* Step: fipe loading */}
+        {step.kind === "fipe_loading" && (
+          <StepProgress
+            icon={<Loader2 size={18} className="animate-spin" />}
+            title="Consultando FIPE…"
+            description={`Buscando valor de tabela para ${step.opp.vehicle} (${step.opp.year}).`}
+          />
+        )}
+
+        {/* Step: fipe manual fallback */}
+        {step.kind === "fipe_manual" && (
+          <div className="space-y-3">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+              <strong>FIPE não disponível.</strong> Informe o valor manualmente — use a tabela
+              oficial em{" "}
+              <a
+                href="https://veiculos.fipe.org.br"
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
+                veiculos.fipe.org.br
+              </a>
+              .
+            </div>
+            <label className="block">
+              <span className="text-xs font-semibold text-slate-600 uppercase">
+                Valor FIPE (R$)
+              </span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={manualFipe}
+                onChange={(e) => setManualFipe(e.target.value)}
+                placeholder="Ex: 85000"
+                className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
+              />
+            </label>
+            {error && <InlineError message={error} />}
+            <button
+              type="button"
+              onClick={() => handleManualFipeSubmit(step.opp)}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold"
+            >
+              Adicionar ao Marketplace
+            </button>
+          </div>
+        )}
+
+        {/* Step: saving (brief — we finalize synchronously after fipe). */}
+        {step.kind === "saving" && (
+          <StepProgress
+            icon={<Loader2 size={18} className="animate-spin" />}
+            title="Adicionando ao Marketplace…"
+            description=""
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function InlineError({ message }: { message: string }): React.JSX.Element {
+  return (
+    <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700 flex items-start gap-2">
+      <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+      <span>{message}</span>
+    </div>
+  );
+}
+
+interface StepProgressProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}
+
+function StepProgress({ icon, title, description }: StepProgressProps): React.JSX.Element {
+  return (
+    <div className="py-6 text-center space-y-2">
+      <div className="flex items-center justify-center text-blue-600">{icon}</div>
+      <p className="text-sm font-semibold text-slate-900">{title}</p>
+      {description && <p className="text-xs text-slate-500">{description}</p>}
+    </div>
+  );
+}
+
+interface PreviewCardProps {
+  opp: ScrapedOpportunity;
+  onConfirm: () => void;
+  children?: React.ReactNode;
+}
+
+function PreviewCard({ opp, onConfirm, children }: PreviewCardProps): React.JSX.Element {
+  return (
+    <div className="space-y-3">
+      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1.5">
+        <p className="text-sm font-semibold text-slate-900">{opp.vehicle || "Sem título"}</p>
+        <div className="flex items-center gap-3 text-xs text-slate-600 flex-wrap">
+          <span className="flex items-center gap-1">
+            <Calendar size={11} /> {opp.year || "—"}
+          </span>
+          <span className="flex items-center gap-1">
+            <Gauge size={11} /> {opp.km ? `${opp.km.toLocaleString("pt-BR")} km` : "—"}
+          </span>
+          <span className="flex items-center gap-1">
+            <MapPin size={11} /> {opp.location}
+          </span>
         </div>
-      )}
+        <p className="text-base font-bold text-emerald-700">
+          R$ {opp.dealPrice.toLocaleString("pt-BR")}
+        </p>
+        {opp.motivationSignals.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap pt-1">
+            {opp.motivationSignals.map((s) => (
+              <Badge key={s} variant="warning" size="xs">
+                {s}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+      {children}
+      <button
+        type="button"
+        onClick={onConfirm}
+        className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2"
+      >
+        <Sparkles size={14} /> Buscar FIPE e adicionar
+      </button>
     </div>
   );
 }
