@@ -3,34 +3,54 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 2 context gathered
-last_updated: "2026-04-21T02:45:53.155Z"
-last_activity: 2026-04-21 -- Phase 02 planning complete
+stopped_at: Pivot to v3 product shell (Phase 5)
+last_updated: "2026-04-21T04:30:00.000Z"
+last_activity: 2026-04-21 -- Pivot to v3; Phase 5 plan created; FIPE fix deployed
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 0
-  total_plans: 15
+  total_plans: 23
   completed_plans: 7
-  percent: 47
+  percent: 30
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-18)
+See: .planning/PROJECT.md (updated 2026-04-21 — PIVOT NOTICE at top)
 
-**Core value:** O agente consegue negociar com PFs reais de forma convincente e extrair 20–30% vs FIPE consistentemente — sem isso, o modelo de negócio do AutoAgent inteiro cai.
-**Current focus:** Phase 1 — Chat Manual Funcional
+**Current focus:** Phase 5 — v3 Product Shell (DEADLINE 2026-04-24 sexta, demo Felipe)
+
+**Active specs (canonical):**
+- `C:\Users\pc\Downloads\projeto autoagent atualizado\PRD_AutoAgent_v3.md`
+- `C:\Users\pc\Downloads\projeto autoagent atualizado\AutoAgent_UX_Prototype_v3.jsx`
+
+**Core value (v3):** Shell lojista convincente + chat live = prova de que v3 é implementável para apresentar ao Felipe antes das entrevistas com lojistas.
+
+## Pivot Context (2026-04-21)
+
+User reviewed Phase 1 live deploy (`auto-agent-chi.vercel.app`) 2026-04-21 and flagged:
+1. **Directional error:** Phase 1 UX framed AutoAgent as PF-self-service. Correct model per PRD v3 is B2B lojista marketplace. PF is lead via WhatsApp, never user.
+2. **FIPE autofetch bug:** root caused to `Promise.all(120)` saturating Vercel Edge outbound pool. Fix committed `75b3177` (chunked parallel, 10 per wave, early-break). Deployed 2026-04-21.
+
+User direction: pivot to v3 full product by sexta 2026-04-24. Domain purchased: `autoagente.ai`. Scraping: Apify (decidido por Claude). Deploy: Vercel primary, DO staging secondary.
+
+Phase 1 chat engine (`/api/negotiate/stream`, Zustand store, ChatView, SummaryPanel) is preserved as the Backstage module core. No code is discarded.
 
 ## Current Position
 
-Phase: 1 of 4 (Chat Manual Funcional)
-Plan: 7 of 8 in current phase (Waves 0, 1, 2, 3, 4 done)
-Status: Ready to execute
-Last activity: 2026-04-21 -- Phase 02 planning complete
+Phase: 5 of 5 (v3 Product Shell — pivot)
+Plan: 0 of 8 (Phase 5 just scaffolded)
+Status: Executing
+Last activity: 2026-04-21 -- Pivot to v3; Phase 5 plan created; FIPE fix deployed
 
-Progress: [█████████░] 87%
+Deferred phases:
+- Phase 2 (Inteligência do Agente) — 7 plans planned, 0 executed. Resume after v3 shell stable.
+- Phase 3 (PF Simulado e Batch) — TBD plans. Deferred.
+- Phase 4 (Análise, Export e A/B) — TBD plans. Deferred.
+
+Progress: [███░░░░░░░] 30% (7 plans done / 23 estimated)
 
 ## Performance Metrics
 

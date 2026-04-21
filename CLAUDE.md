@@ -1,21 +1,41 @@
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
 
-**AutoAgent Negotiation Playground**
+**AutoAgent — v3 Product Shell (pivot 2026-04-21)**
 
-Uma ferramenta técnica de validação que simula negociações de compra de veículos seminovos via IA. Um agente Claude negocia com um vendedor pessoa física (humano ou simulado) a partir de dados de um anúncio real, tentando fechar 20–30% abaixo da FIPE em até 6 rodadas. Serve simultaneamente como prova técnica da viabilidade do núcleo do AutoAgent e como demo ao vivo para entrevistas de validação com lojistas.
+> **URGENT:** Repositório está em pivô para o produto v3 completo (PRD v3, 2026-04-18). Deadline: sexta 2026-04-24. Scope ativo em `.planning/phases/05-v3-pivot/05-PHASE-PLAN.md`. Especificações-fonte em `C:\Users\pc\Downloads\projeto autoagent atualizado\` (PRD + UX Prototype + Business Plan + Financial Model).
 
-**Core Value:** O agente consegue negociar com PFs reais de forma convincente e extrair 20–30% vs FIPE consistentemente — sem isso, o modelo de negócio do AutoAgent inteiro cai.
+**O que AutoAgent é (v3):** marketplace transacional B2B para lojistas de seminovos. Lojistas pagam assinatura tier Starter/Premium/Enterprise (R$197/499/1997) + success fee (6%/3%/2% sobre economia vs FIPE). Agente IA monitora WebMotors/OLX/Mercado Livre, aborda PFs motivados via WhatsApp/formulário, negocia até -20/-30% da FIPE, oportunidade entra no Marketplace do dashboard, lojista "Assume Deal" e recebe contato + docs. AutoAgent intermedeia laudo/contrato/transferência/escrow.
 
-### Constraints
+**PF nunca é cliente.** Non-Goal NG4 explícito do PRD: "Atender vendedor PF como cliente B2C". PF é lead via WhatsApp. Qualquer UI/copy que sugira PF self-service está errada.
 
-- **Stack:** Next.js 15 App Router + TypeScript strict + Tailwind v4 + shadcn/ui + pnpm + Biome + Zustand — não negociável (seção 10 do brief)
-- **LLM:** Anthropic Claude Sonnet 4.6 exclusivamente — alinhamento com stack do projeto maior
-- **Deploy:** Vercel — preview branches + production
-- **Sem banco:** localStorage suficiente até v1; evitar introdução de DB
-- **Sem auth:** nenhuma fase deste playground usa autenticação
-- **Budget de batch:** cap de R$ 50 por rodada de batch (custo de API)
-- **Performance:** carrega em <2s, streaming visível, latência percebida baixa no Brasil → Vercel Edge runtime
+**Núcleo técnico reaproveitado:** todo o motor de negociação da Phase 1 (`/api/negotiate/stream`, Zustand store, ChatView, SummaryPanel, prompt system) vira o módulo **Backstage de Negociações** do dashboard. Nada do código Phase 1 se perde.
+
+### Scope para sexta (deadline duro)
+
+**Entra:**
+- Dashboard lojista com 7 módulos (Marketplace, Meus Deals, Backstage, Dashboard KPI, Radar, Settings/Plans, Admin mínimo)
+- Backstage embutindo o chat live do Phase 1 contra oportunidades mockadas
+- Apify integrado: colar URL WebMotors → extrair dados → criar oportunidade
+- FIPE autofetch funcionando (fix já deployado 2026-04-21)
+- Deploy em autoagente.ai (Vercel primary, DO como secondary/staging)
+
+**Não entra (bloqueadores duros — impossível em 3 dias):**
+- WhatsApp Business real (aprovação Meta 1-4 semanas)
+- Pagamento de fee real (Stripe/MP compliance = dias)
+- Auth multi-tenant + DB Postgres (localStorage persiste)
+- Scraping contínuo 30k/mês (só on-demand por URL)
+- Exclusividade digital legal (PDF mock)
+
+### Constraints (herdados da Phase 1, ainda válidos)
+
+- **Stack:** Next.js 15 App Router + TypeScript strict + Tailwind v4 + shadcn/ui + pnpm + Biome + Zustand — não negociável
+- **LLM:** Anthropic Claude Sonnet 4.6 exclusivamente
+- **Deploy primário:** Vercel (autoagente.ai); DO App Platform como secondary/migração futura
+- **Sem DB:** localStorage persiste state do lojista single-tenant
+- **Sem auth:** single-tenant, "login" fake via select de persona
+- **Scraping:** Apify on-demand (não Bright Data — overkill para o caso de uso atual)
+- **Performance:** <2s primeiro render no Edge
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:STACK.md -->

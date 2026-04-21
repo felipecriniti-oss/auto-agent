@@ -1,12 +1,22 @@
-# AutoAgent Negotiation Playground
+# AutoAgent — v3 Product Shell
 
-## What This Is
+## Pivot Notice (2026-04-21)
 
-Uma ferramenta técnica de validação que simula negociações de compra de veículos seminovos via IA. Um agente Claude negocia com um vendedor pessoa física (humano ou simulado) a partir de dados de um anúncio real, tentando fechar 20–30% abaixo da FIPE em até 6 rodadas. Serve simultaneamente como prova técnica da viabilidade do núcleo do AutoAgent e como demo ao vivo para entrevistas de validação com lojistas.
+Repo pivotou da "playground de validação técnica" para o **produto v3 completo** após review do deploy Phase 1 com o usuário. Direção autoritativa: `C:\Users\pc\Downloads\projeto autoagent atualizado\PRD_AutoAgent_v3.md` + UX Prototype v3. Deadline duro: sexta 2026-04-24 (demo Felipe).
+
+**Antes do pivô:** playground unidirecional (PF simulado dialogando com agente) = **errado**. Usuário corrigiu: AutoAgent é B2B, lojista-facing, PF é lead via WhatsApp.
+
+**Phase 1 status:** 7/8 plans deployados, chat engine funcional — será reaproveitado como módulo Backstage no shell v3. Plans 02-00..02-06 (Inteligência do Agente) ficam deferred até o pivô v3 estabilizar.
+
+## What This Is (v3)
+
+AutoAgent é um marketplace transacional B2B para lojistas de seminovos. Lojistas pagam assinatura dual-tier (Starter R$197 / Premium R$499 / Enterprise R$1.997) + success fee (6%/3%/2% sobre economia vs FIPE). Agente IA monitora marketplaces (WebMotors/OLX/Mercado Livre), aborda PFs motivados, negocia -20 a -30% da FIPE, e entrega oportunidades pré-negociadas no dashboard do lojista. Lojista "Assume Deal", paga fee, recebe contato + documentação. AutoAgent intermedeia laudo/contrato/transferência/escrow.
+
+**Este repo entrega (até sexta 24/04):** shell completo do dashboard lojista com 7 módulos (Marketplace, Meus Deals, Backstage, Dashboard, Radar, Settings/Plans, Admin), chat Phase 1 embutido como Backstage live, Apify scraping on-demand por URL, deploy em autoagente.ai.
 
 ## Core Value
 
-O agente consegue negociar com PFs reais de forma convincente e extrair 20–30% vs FIPE consistentemente — sem isso, o modelo de negócio do AutoAgent inteiro cai.
+A presença do dashboard convincente + o núcleo de negociação funcional já validam que o modelo v3 é implementável — sem isso o Felipe não fecha as entrevistas de validação com lojistas que viriam a seguir. O chat contra Claude é a prova técnica; o resto do shell é a credibilidade visual.
 
 ## Requirements
 
