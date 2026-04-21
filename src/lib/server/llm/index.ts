@@ -41,4 +41,77 @@ export async function streamLLM(provider: LLMProvider, opts: StreamOptions): Pro
   return streamAnthropic(normalized);
 }
 
+export interface FallbackResult {
+  providerUsed: LLMProvider;
+  fellBack: boolean;
+}
+
+/**
+ * Provider fallback wrapper.
+ *
+ * Runs `primary` first. If it throws BEFORE any text has been streamed to
+ * onText, retries with the other configured provider silently — user sees
+ * no error, no retry button, no double-charge. Once any chunk has flowed,
+ * a mid-stream failure is surfaced (you can't cleanly rebind a partial
+ * stream to a different model without the client seeing nonsense).
+ *
+ * Returns which provider actually served the request; the caller can log
+ * or telemetry on `fellBack`.
+ *
+ * If BOTH providers are missing keys, `primary` throws and the caller gets
+ * the same behavior as today — this wrapper never invents a configured
+ * provider that isn't there.
+ */
+export async function streamLLMWithFallback(
+  primary: LLMProvider,
+  opts: StreamOptions,
+): Promise<FallbackResult> {
+  const other: LLMProvider = primary === "anthropic" ? "gemini" : "anthropic";
+  let firstChunk = false;
+
+  const wrapped: StreamOptions = {
+    ...opts,
+    messages: normalizeMessages(opts.messages),
+    onText: (chunk: string) => {
+      firstChunk = true;
+      opts.onText(chunk);
+    },
+  };
+
+  try {
+    if (primary === "gemini") await streamGemini(wrapped);
+    else await streamAnthropic(wrapped);
+    return { providerUsed: primary, fellBack: false };
+  } catch (err) {
+    if (firstChunk) throw err; // mid-stream failure — don't fall back
+    if (!isProviderConfigured(other)) throw err; // no fallback target
+
+    // Reset the streamed-flag for the fallback attempt
+    firstChunk = false;
+    const fallbackOpts: StreamOptions = { ...wrapped, onText: wrapped.onText };
+
+    console.warn(
+      JSON.stringify({
+        scope: "llm.fallback",
+        primary,
+        fellBackTo: other,
+        primaryError: (err as { message?: string })?.message ?? String(err),
+      }),
+    );
+
+    if (other === "gemini") await streamGemini(fallbackOpts);
+    else await streamAnthropic(fallbackOpts);
+    return { providerUsed: other, fellBack: true };
+  }
+}
+
+/**
+ * True if at least one provider has its API key configured. Use in routes
+ * when deciding whether to short-circuit with a 500 "misconfigured" vs
+ * continuing to the fallback-aware stream call.
+ */
+export function isAnyProviderConfigured(): boolean {
+  return isProviderConfigured("anthropic") || isProviderConfigured("gemini");
+}
+
 export type { LLMProvider, StreamOptions } from "./types";

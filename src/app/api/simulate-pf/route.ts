@@ -1,6 +1,6 @@
 import { type PfSimContext, buildPfSimPrompt } from "@/lib/prompts/pf-sim-v1";
 import { isNegotiationEnabled } from "@/lib/server/kill-switch";
-import { isProviderConfigured, resolveProvider, streamLLM } from "@/lib/server/llm";
+import { isAnyProviderConfigured, resolveProvider, streamLLMWithFallback } from "@/lib/server/llm";
 import type { LLMMessage } from "@/lib/server/llm/types";
 import { checkRateLimit } from "@/lib/server/rate-limit";
 import { z } from "zod";
@@ -85,7 +85,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const provider = resolveProvider();
-  if (!isProviderConfigured(provider)) {
+  if (!isAnyProviderConfigured()) {
     return Response.json({ error: "misconfigured" }, { status: 500 });
   }
 
@@ -110,8 +110,9 @@ export async function POST(request: Request): Promise<Response> {
   const timeout = setTimeout(() => abortCtl.abort(), UPSTREAM_TIMEOUT_MS);
 
   let accumulated = "";
+  let fallbackUsed = false;
   try {
-    await streamLLM(provider, {
+    const result = await streamLLMWithFallback(provider, {
       systemPrompt,
       messages: flippedMessages,
       maxTokens: MAX_TOKENS,
@@ -120,6 +121,7 @@ export async function POST(request: Request): Promise<Response> {
         accumulated += chunk;
       },
     });
+    fallbackUsed = result.fellBack;
   } catch (err) {
     clearTimeout(timeout);
     if (abortCtl.signal.aborted) {
@@ -138,5 +140,6 @@ export async function POST(request: Request): Promise<Response> {
   return Response.json({
     message,
     persona: body.persona,
+    fallbackUsed,
   });
 }

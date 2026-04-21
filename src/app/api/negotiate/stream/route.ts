@@ -1,7 +1,7 @@
 import { buildSystemPrompt } from "@/lib/prompts/system-v1";
 import { negotiateRequestSchema } from "@/lib/schemas/negotiate";
 import { isNegotiationEnabled } from "@/lib/server/kill-switch";
-import { isProviderConfigured, resolveProvider, streamLLM } from "@/lib/server/llm";
+import { isAnyProviderConfigured, resolveProvider, streamLLMWithFallback } from "@/lib/server/llm";
 import { checkRateLimit } from "@/lib/server/rate-limit";
 
 export const runtime = "edge";
@@ -48,8 +48,8 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const provider = resolveProvider();
-  if (!isProviderConfigured(provider)) {
-    console.warn(`${provider} API key missing`);
+  if (!isAnyProviderConfigured()) {
+    console.warn("No LLM provider configured (ANTHROPIC_API_KEY / GEMINI_API_KEY)");
     return Response.json({ error: "misconfigured" }, { status: 500 });
   }
 
@@ -67,7 +67,7 @@ export async function POST(request: Request): Promise<Response> {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        await streamLLM(provider, {
+        const result = await streamLLMWithFallback(provider, {
           systemPrompt,
           messages: body.messages,
           maxTokens: MAX_TOKENS,
@@ -80,6 +80,14 @@ export async function POST(request: Request): Promise<Response> {
             }
           },
         });
+        if (result.fellBack) {
+          console.info(
+            JSON.stringify({
+              scope: "negotiate_stream.fallback",
+              provider: result.providerUsed,
+            }),
+          );
+        }
         controller.enqueue(encodeFrame({ type: "done" }));
         controller.close();
       } catch (err) {
