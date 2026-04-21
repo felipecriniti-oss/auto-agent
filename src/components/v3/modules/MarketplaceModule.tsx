@@ -46,6 +46,7 @@ type ScrapedOpportunity = Omit<Opportunity, "fipe" | "savings" | "fee" | "margin
 
 type ImportStep =
   | { kind: "input" }
+  | { kind: "manual_entry" }
   | { kind: "scraping" }
   | { kind: "preview"; opp: ScrapedOpportunity }
   | { kind: "fipe_loading"; opp: ScrapedOpportunity }
@@ -368,6 +369,18 @@ function ImportUrlDialog({ onClose, currentPlan }: ImportUrlDialogProps): React.
   const [error, setError] = useState<string | null>(null);
   const [manualFipe, setManualFipe] = useState("");
 
+  // Manual entry fields (backup path when scraping fails or user prefers to type)
+  const [manualForm, setManualForm] = useState({
+    marca: "",
+    modelo: "",
+    ano: "",
+    km: "",
+    precoPedido: "",
+    cidade: "",
+    sellerName: "",
+    fipe: "",
+  });
+
   const busy = step.kind === "scraping" || step.kind === "fipe_loading" || step.kind === "saving";
 
   const closeIfIdle = (): void => {
@@ -393,13 +406,19 @@ function ImportUrlDialog({ onClose, currentPlan }: ImportUrlDialogProps): React.
         if (res.status === 429) {
           setError("Muitas tentativas — aguarde 1 minuto e tente novamente.");
         } else if (res.status === 504 || data.error === "scrape_timeout") {
-          setError("Timeout no scraping — o WebMotors pode estar lento. Tente novamente.");
+          setError(
+            "Timeout no scraping — WebMotors tem proteção anti-bot agressiva. Use a entrada manual abaixo.",
+          );
         } else if (data.error === "apify_token_missing") {
-          setError("APIFY_API_TOKEN não configurado no servidor. Avise o admin.");
+          setError("APIFY_API_TOKEN não configurado no Vercel. Use a entrada manual abaixo.");
         } else if (data.error === "only_webmotors_supported") {
-          setError("Só WebMotors é suportado nesta versão.");
+          setError("Só WebMotors é suportado via URL. Use a entrada manual pra outras fontes.");
         } else {
-          setError(`Falha no scraping (${data.error ?? res.status}). Tente novamente.`);
+          // Surface the Apify detail when present — helps diagnose actor/shape issues
+          const detail = data.detail ? ` · ${data.detail.slice(0, 120)}` : "";
+          setError(
+            `Falha no scraping (${data.error ?? res.status}${detail}). Use a entrada manual abaixo.`,
+          );
         }
         return;
       }
@@ -472,6 +491,57 @@ function ImportUrlDialog({ onClose, currentPlan }: ImportUrlDialogProps): React.
     finalizeWithFipe(opp, parsed);
   };
 
+  const handleManualEntrySubmit = (): void => {
+    setError(null);
+    const ano = Number(manualForm.ano.replace(/[^0-9]/g, ""));
+    const km = Number(manualForm.km.replace(/[^0-9]/g, ""));
+    const precoPedido = Number(manualForm.precoPedido.replace(/[^0-9]/g, ""));
+    const fipe = Number(manualForm.fipe.replace(/[^0-9]/g, ""));
+    if (
+      !manualForm.marca.trim() ||
+      !manualForm.modelo.trim() ||
+      ano < 1990 ||
+      ano > 2030 ||
+      km <= 0 ||
+      precoPedido < 1000 ||
+      fipe < 1000 ||
+      !manualForm.cidade.trim()
+    ) {
+      setError("Preencha marca, modelo, ano (1990-2030), km, preço pedido e FIPE (>= R$ 1.000).");
+      return;
+    }
+    const savings = Math.max(0, fipe - precoPedido);
+    const margin = fipe > 0 ? Math.round((savings / fipe) * 100) : 0;
+    const fee = calcFee(savings, currentPlan);
+    const finalOpp: Opportunity = {
+      id: Date.now(),
+      vehicle: `${manualForm.marca.trim()} ${manualForm.modelo.trim()}`,
+      year: ano,
+      km,
+      dealPrice: precoPedido,
+      fipe,
+      savings,
+      fee,
+      margin,
+      score: Math.min(95, 70 + Math.floor(margin / 2)),
+      location: manualForm.cidade.trim(),
+      sellerName: manualForm.sellerName.trim() || "Anunciante",
+      img: "🚗",
+      color: "—",
+      fuel: "—",
+      rounds: 0,
+      motivationSignals: [],
+      ddStatus: "review",
+      timeLeft: "7d 00h",
+      source: "WebMotors",
+    };
+    addOpportunity(finalOpp);
+    toast.success("Oportunidade adicionada!", {
+      description: `${finalOpp.vehicle} — economia R$ ${savings.toLocaleString("pt-BR")} (${margin}% vs FIPE).`,
+    });
+    onClose();
+  };
+
   return (
     <div
       className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4"
@@ -524,8 +594,8 @@ function ImportUrlDialog({ onClose, currentPlan }: ImportUrlDialogProps): React.
               </div>
             </label>
             <p className="text-xs text-slate-500">
-              Cole a URL do anúncio do WebMotors. O agente extrai os dados do veículo e consulta a
-              FIPE automaticamente.
+              Cole a URL do anúncio do WebMotors. O agente extrai os dados e consulta a FIPE
+              automaticamente.
             </p>
             {error && <InlineError message={error} />}
             <button
@@ -534,8 +604,113 @@ function ImportUrlDialog({ onClose, currentPlan }: ImportUrlDialogProps): React.
               disabled={!url.trim()}
               className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2"
             >
-              <Sparkles size={14} /> Importar
+              <Sparkles size={14} /> Importar por URL
             </button>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-px bg-slate-200" />
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                ou
+              </span>
+              <div className="flex-1 h-px bg-slate-200" />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setStep({ kind: "manual_entry" });
+              }}
+              className="w-full py-2.5 border border-slate-200 hover:border-[#4C46DC]/40 text-slate-700 hover:text-[#4C46DC] rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+            >
+              Preencher anúncio manualmente
+            </button>
+            <p className="text-[11px] text-slate-400 text-center">
+              Scraping real depende do Apify + anti-bot do WebMotors. A entrada manual funciona
+              sempre e gera a mesma oportunidade no Marketplace.
+            </p>
+          </div>
+        )}
+
+        {/* Step: manual_entry */}
+        {step.kind === "manual_entry" && (
+          <div className="space-y-3">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600">
+              Cole os dados do anúncio real (WebMotors, OLX, Mercado Livre). O agente usa isso como
+              ponto de partida da negociação.
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <ManualField
+                label="Marca"
+                value={manualForm.marca}
+                onChange={(v) => setManualForm({ ...manualForm, marca: v })}
+                placeholder="Audi"
+              />
+              <ManualField
+                label="Modelo"
+                value={manualForm.modelo}
+                onChange={(v) => setManualForm({ ...manualForm, modelo: v })}
+                placeholder="Q5 Performance"
+              />
+              <ManualField
+                label="Ano"
+                value={manualForm.ano}
+                onChange={(v) => setManualForm({ ...manualForm, ano: v })}
+                placeholder="2023"
+                inputMode="numeric"
+              />
+              <ManualField
+                label="Km"
+                value={manualForm.km}
+                onChange={(v) => setManualForm({ ...manualForm, km: v })}
+                placeholder="28000"
+                inputMode="numeric"
+              />
+              <ManualField
+                label="Preço pedido (R$)"
+                value={manualForm.precoPedido}
+                onChange={(v) => setManualForm({ ...manualForm, precoPedido: v })}
+                placeholder="198000"
+                inputMode="numeric"
+              />
+              <ManualField
+                label="FIPE (R$)"
+                value={manualForm.fipe}
+                onChange={(v) => setManualForm({ ...manualForm, fipe: v })}
+                placeholder="268000"
+                inputMode="numeric"
+              />
+              <ManualField
+                label="Cidade"
+                value={manualForm.cidade}
+                onChange={(v) => setManualForm({ ...manualForm, cidade: v })}
+                placeholder="Moema, SP"
+              />
+              <ManualField
+                label="Vendedor"
+                value={manualForm.sellerName}
+                onChange={(v) => setManualForm({ ...manualForm, sellerName: v })}
+                placeholder="Marcos R."
+              />
+            </div>
+            {error && <InlineError message={error} />}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setStep({ kind: "input" });
+                }}
+                className="flex-1 py-2.5 border border-slate-200 hover:border-slate-300 text-slate-700 rounded-lg text-sm font-medium"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                onClick={handleManualEntrySubmit}
+                className="flex-1 py-2.5 bg-[#4C46DC] hover:bg-[#3d38b8] text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2"
+              >
+                <Sparkles size={14} /> Adicionar ao Marketplace
+              </button>
+            </div>
           </div>
         )}
 
@@ -623,6 +798,38 @@ function InlineError({ message }: { message: string }): React.JSX.Element {
       <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
       <span>{message}</span>
     </div>
+  );
+}
+
+interface ManualFieldProps {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  inputMode?: "numeric" | "text";
+}
+
+function ManualField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  inputMode,
+}: ManualFieldProps): React.JSX.Element {
+  return (
+    <label className="block">
+      <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+        {label}
+      </span>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        inputMode={inputMode}
+        className="mt-1 w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:border-[#4C46DC] focus:ring-4 focus:ring-[#4C46DC]/10"
+      />
+    </label>
   );
 }
 
