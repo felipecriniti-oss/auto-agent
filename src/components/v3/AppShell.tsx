@@ -5,6 +5,7 @@ import { useAppStore } from "@/lib/stores/app";
 import type { AppModule } from "@/lib/stores/app";
 import type { ComponentType } from "react";
 import Sidebar from "./Sidebar";
+import SignupView from "./SignupView";
 import AdminModule from "./modules/AdminModule";
 import BackstageModule from "./modules/BackstageModule";
 import DashboardModule from "./modules/DashboardModule";
@@ -29,7 +30,19 @@ const MODULES: Record<AppModule, ComponentType> = {
 
 export default function AppShell() {
   const activeModule = useAppStore((s) => s.activeModule);
+  const onboardingComplete = useAppStore((s) => s.onboardingComplete);
   const ActiveComponent = MODULES[activeModule];
+
+  // Fake-auth gate: if the lojista hasn't done the signup step, gate the whole
+  // /app behind SignupView. Real Supabase auth lands in Phase 6.
+  if (!onboardingComplete) {
+    return (
+      <>
+        <SignupView />
+        <Toaster richColors position="top-right" />
+      </>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-50">

@@ -19,6 +19,14 @@ export type AppModule =
   | "onboarding"
   | "playground";
 
+/**
+ * Persona picker in the fake-signup flow maps to a default plan tier,
+ * matching the personas profiled on autoagente.ai §07 PARA QUEM.
+ */
+export type Persona = "investidor" | "lojista_micro" | "grupo_medio";
+
+export type PilotStage = "idle" | "searching" | "found" | "done";
+
 interface AppState {
   activeModule: AppModule;
   currentPlan: PlanKey;
@@ -27,6 +35,16 @@ interface AppState {
   myDeals: MyDeal[];
   activeOpportunityId: number | null;
 
+  // profile (fake auth — real Supabase lands in Phase 6)
+  profileName: string | null;
+  profileCity: string | null;
+  profilePersona: Persona | null;
+
+  // pilot / demo ergonomics
+  pilotStage: PilotStage;
+  pilotDiscoveredIds: number[]; // ids injected by the theatrical pilot sequence
+  autoModeOpportunityIds: number[]; // opps that should auto-play a negotiation in Backstage
+
   // actions
   setActiveModule: (module: AppModule) => void;
   setCurrentPlan: (plan: PlanKey) => void;
@@ -34,6 +52,25 @@ interface AppState {
   addOpportunity: (opp: Opportunity) => void;
   assumeDeal: (oppId: number) => void;
   setActiveOpportunity: (id: number | null) => void;
+  setProfile: (fields: {
+    name: string;
+    city: string;
+    persona: Persona;
+  }) => void;
+  resetProfile: () => void;
+  startPilotStage: (stage: PilotStage) => void;
+  markOpportunityAutoMode: (id: number, autoMode: boolean) => void;
+}
+
+function personaToPlan(persona: Persona): PlanKey {
+  switch (persona) {
+    case "lojista_micro":
+      return "premium";
+    case "grupo_medio":
+      return "enterprise";
+    case "investidor":
+      return "starter";
+  }
 }
 
 function makeInitialState(): Pick<
@@ -44,6 +81,12 @@ function makeInitialState(): Pick<
   | "opportunities"
   | "myDeals"
   | "activeOpportunityId"
+  | "profileName"
+  | "profileCity"
+  | "profilePersona"
+  | "pilotStage"
+  | "pilotDiscoveredIds"
+  | "autoModeOpportunityIds"
 > {
   return {
     activeModule: "marketplace",
@@ -52,6 +95,12 @@ function makeInitialState(): Pick<
     opportunities: mockOpportunities,
     myDeals: mockMyDeals,
     activeOpportunityId: null,
+    profileName: null,
+    profileCity: null,
+    profilePersona: null,
+    pilotStage: "idle",
+    pilotDiscoveredIds: [],
+    autoModeOpportunityIds: [],
   };
 }
 
@@ -95,18 +144,66 @@ export const useAppStore = create<AppState>()(
       },
 
       setActiveOpportunity: (id) => set({ activeOpportunityId: id }),
+
+      setProfile: ({ name, city, persona }) =>
+        set({
+          profileName: name,
+          profileCity: city,
+          profilePersona: persona,
+          currentPlan: personaToPlan(persona),
+          onboardingComplete: true,
+        }),
+
+      resetProfile: () =>
+        set({
+          profileName: null,
+          profileCity: null,
+          profilePersona: null,
+          onboardingComplete: false,
+        }),
+
+      startPilotStage: (stage) => set({ pilotStage: stage }),
+
+      markOpportunityAutoMode: (id, autoMode) => {
+        const current = get().autoModeOpportunityIds;
+        if (autoMode) {
+          if (current.includes(id)) return;
+          set({ autoModeOpportunityIds: [...current, id] });
+        } else {
+          set({ autoModeOpportunityIds: current.filter((x) => x !== id) });
+        }
+      },
     }),
     {
       name: "autoagent-app-v1",
       storage: createJSONStorage(() => localStorage),
-      version: 1,
-      migrate: (persisted) => persisted as AppState,
+      version: 2,
+      migrate: (persisted, version) => {
+        // v1 → v2: add profile + pilot fields (default nulls/empties)
+        if (version < 2) {
+          const initial = makeInitialState();
+          return {
+            ...initial,
+            ...(persisted as Partial<AppState>),
+            profileName: null,
+            profileCity: null,
+            profilePersona: null,
+            pilotStage: "idle" as PilotStage,
+            pilotDiscoveredIds: [],
+            autoModeOpportunityIds: [],
+          } as AppState;
+        }
+        return persisted as AppState;
+      },
       partialize: (state) => ({
         activeModule: state.activeModule,
         currentPlan: state.currentPlan,
         onboardingComplete: state.onboardingComplete,
         opportunities: state.opportunities,
         myDeals: state.myDeals,
+        profileName: state.profileName,
+        profileCity: state.profileCity,
+        profilePersona: state.profilePersona,
       }),
       onRehydrateStorage: () => (_state, error) => {
         if (error) {
