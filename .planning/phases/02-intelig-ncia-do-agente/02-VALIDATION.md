@@ -51,6 +51,8 @@ created: 2026-04-20
 | 02-T3 | 02-02 | 2 | INTEL-03 | — | anthropic adapter passes fewShot + cache + usage | integration | `pnpm test -- --run src/lib/server/llm/` | yes | ⬜ pending |
 | 03-T1 | 02-03 | 3 | INTEL-01, INTEL-04, INTEL-05, INTEL-06 | T-02-03-03 | store rationale extraction + snapshot + selectors | unit | `pnpm test -- --run src/lib/stores/` | yes | ⬜ pending |
 | 03-T2 | 02-03 | 3 | INTEL-01, INTEL-02, INTEL-03 | T-02-03-01, T-02-03-02, T-02-03-04 | route v2 branching + server motivation + telemetry | integration | `pnpm test -- --run src/app/api/negotiate/stream/route.test.ts` | yes | ⬜ pending |
+| 03-T1b | 02-03 | 3 | AI-SPEC §6 (G-01..G-05) | T-02-03-01, T-02-03-02, T-02-03-03 | client-side flag writers detect leaks / walkAway / markdown / truncation | unit | `pnpm test -- --run src/lib/stores/__tests__/flags.test.ts` | yes | ⬜ pending |
+| 03-T2b | 02-03 | 3 | AI-SPEC §6 G-05 | T-02-02-03 | server emits `event: truncated` SSE frame on `stop_reason === 'max_tokens'` | integration | `pnpm test -- --run src/app/api/negotiate/stream/route.test.ts` | yes | ⬜ pending |
 | 04-T1 | 02-04 | 4 | INTEL-01 | T-02-04-02 | AdListingForm motivoDaVenda select renders | component | `pnpm test -- --run src/components/negotiation/AdListingForm && pnpm typecheck` | yes | ⬜ pending |
 | 04-T2 | 02-04 | 4 | INTEL-05 | — | AgentThinking states render correctly | component | `pnpm test -- --run src/components/negotiation/__tests__/AgentThinking.test.tsx` | yes | ⬜ pending |
 | 04-T3 | 02-04 | 4 | INTEL-04 | T-02-04-03 | AgentConfigForm + LeftColumnPanel validate + submit + alert | component | `pnpm test -- --run src/components/negotiation/__tests__/AgentConfigForm.test.tsx src/components/negotiation/__tests__/LeftColumnPanel.test.tsx` | yes | ⬜ pending |
@@ -78,7 +80,7 @@ Per 02-RESEARCH.md §Validation Architecture, Wave 0 creates test scaffolds befo
 - [ ] `src/lib/prompts/__tests__/few-shot.test.ts` — stubs for INTEL-03 (Audi Q5 pair assembly)
 - [ ] `src/lib/data/__tests__/comparables.test.ts` — stubs for INTEL-02 (array shape + injection format)
 - [ ] `src/lib/stores/__tests__/migrations.test.ts` — stubs for D-14 (v1→v2 localStorage migration)
-- [ ] `src/lib/stores/__tests__/benchmark-selectors.test.ts` — stubs for INTEL-06 (aggregates + gate selectors)
+- [ ] `src/lib/stores/__tests__/flags.test.ts` — stubs for AI-SPEC §6 guardrail flag writers (G-01..G-04 positive+negative cases, G-05 SSE truncation)
 - [ ] `src/lib/schemas/__tests__/agent-config.test.ts` — stubs for INTEL-04 (config slice validation)
 - [ ] `src/components/negotiation/__tests__/AgentThinking.test.tsx` — stubs for INTEL-05 (disclosure component)
 - [ ] `src/components/negotiation/__tests__/AgentConfigForm.test.tsx` — stubs for INTEL-04 UI
@@ -127,7 +129,7 @@ Per 02-RESEARCH.md §Validation Architecture:
 
 - [ ] All tasks have `<automated>` verify or Wave 0 dependencies (filled by planner)
 - [ ] Sampling continuity: no 3 consecutive tasks without automated verify (checked by plan-checker)
-- [ ] Wave 0 covers all MISSING references (13 scaffolds listed above)
+- [ ] Wave 0 covers all MISSING references (13 scaffolds — composition changed: benchmark-selectors replaced by flags per Plan 00 revision; selectors co-located in negotiation.test.ts instead)
 - [ ] No watch-mode flags (`--run` used everywhere)
 - [ ] Feedback latency < 30s (verified after Wave 0 scaffolds land)
 - [ ] `nyquist_compliant: true` set in frontmatter after plan-checker approval
