@@ -204,6 +204,7 @@ export const useAppStore = create<AppState>()(
         profileName: state.profileName,
         profileCity: state.profileCity,
         profilePersona: state.profilePersona,
+        autoModeOpportunityIds: state.autoModeOpportunityIds,
       }),
       onRehydrateStorage: () => (_state, error) => {
         if (error) {

@@ -25,6 +25,7 @@ export default function PilotLauncher(): React.JSX.Element {
   const pilotStage = useAppStore((s) => s.pilotStage);
   const startPilotStage = useAppStore((s) => s.startPilotStage);
   const addOpportunity = useAppStore((s) => s.addOpportunity);
+  const markOpportunityAutoMode = useAppStore((s) => s.markOpportunityAutoMode);
   const setActiveModule = useAppStore((s) => s.setActiveModule);
   const existingOpps = useAppStore((s) => s.opportunities);
 
@@ -57,6 +58,7 @@ export default function PilotLauncher(): React.JSX.Element {
       const delay = i === 0 ? 2200 : 3800 + Math.floor(Math.random() * 1800);
       await sleep(delay);
       addOpportunity(toAdd[i]);
+      markOpportunityAutoMode(toAdd[i].id, true);
       toast.loading(`${i + 1}/${toAdd.length} oportunidades encontradas · ${toAdd[i].vehicle}`, {
         id: "pilot-run",
         duration: 30000,
@@ -74,7 +76,14 @@ export default function PilotLauncher(): React.JSX.Element {
       description: `Economia agregada potencial: R$ ${totalSavings.toLocaleString("pt-BR")}. Clique em qualquer card pra abrir o Backstage.`,
       duration: 8000,
     });
-  }, [running, existingOpps, startPilotStage, setActiveModule, addOpportunity]);
+  }, [
+    running,
+    existingOpps,
+    startPilotStage,
+    setActiveModule,
+    addOpportunity,
+    markOpportunityAutoMode,
+  ]);
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#4C46DC] via-[#5F54DC] to-[#7063E0] p-6 text-white shadow-lg">

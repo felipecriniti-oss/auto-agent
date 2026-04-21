@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import AutoplayBackstage from "./backstage/AutoplayBackstage";
 import { buildListingFromOpportunity } from "./backstage/helpers";
 
 /**
@@ -44,12 +45,19 @@ import { buildListingFromOpportunity } from "./backstage/helpers";
  * derived from the Opportunity via buildListingFromOpportunity().
  */
 export default function BackstageModule(): React.JSX.Element {
-  const { activeOpportunityId, opportunities, setActiveModule, setActiveOpportunity } = useAppStore(
+  const {
+    activeOpportunityId,
+    opportunities,
+    setActiveModule,
+    setActiveOpportunity,
+    autoModeOpportunityIds,
+  } = useAppStore(
     useShallow((s) => ({
       activeOpportunityId: s.activeOpportunityId,
       opportunities: s.opportunities,
       setActiveModule: s.setActiveModule,
       setActiveOpportunity: s.setActiveOpportunity,
+      autoModeOpportunityIds: s.autoModeOpportunityIds,
     })),
   );
 
@@ -238,8 +246,10 @@ export default function BackstageModule(): React.JSX.Element {
           ) : null}
         </div>
 
-        {/* Live chat area */}
-        {!sessionBoundToOpp ? (
+        {/* Live chat area — autoplay path (agent vs simulated PF) or solo chat */}
+        {autoModeOpportunityIds.includes(opp.id) ? (
+          <AutoplayBackstage opp={opp} />
+        ) : !sessionBoundToOpp ? (
           <div className="bg-white rounded-xl border-2 border-dashed border-blue-200 p-10 text-center">
             <Bot size={40} className="text-blue-400 mx-auto mb-3" />
             <h3 className="text-base font-semibold text-slate-800">
