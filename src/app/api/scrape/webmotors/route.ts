@@ -184,6 +184,45 @@ interface ApifyCallFailure {
   kind: "timeout" | "http" | "shape" | "network";
   detail: string;
   actorTried: string;
+  runId?: string;
+}
+
+const RUN_ID_RE = /run ID:\s*([A-Za-z0-9]+)/;
+
+/**
+ * Apify's /run-sync-get-dataset-items endpoint returns a terse `run-failed`
+ * error with a run ID but no reason. Fetching the run meta lets us surface
+ * the actual exit code, status message, and (when available) the stdout/
+ * stderr tail — the difference between "I don't know why" and "you hit the
+ * free-tier compute cap" / "RESIDENTIAL proxy not in your plan" / "page
+ * function threw TypeError on null selector".
+ */
+async function fetchRunDiagnostics(runId: string, token: string): Promise<string> {
+  try {
+    const res = await fetch(
+      `${APIFY_BASE}/actor-runs/${runId}?token=${encodeURIComponent(token)}`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (!res.ok) {
+      return `run_fetch_${res.status}`;
+    }
+    const json = (await res.json()) as {
+      data?: {
+        status?: string;
+        statusMessage?: string;
+        exitCode?: number;
+      };
+    };
+    const d = json.data ?? {};
+    const parts = [
+      `status=${d.status ?? "?"}`,
+      `exit=${d.exitCode ?? "?"}`,
+      d.statusMessage ? `msg="${String(d.statusMessage).slice(0, 140)}"` : "",
+    ].filter(Boolean);
+    return parts.join(" ");
+  } catch (err) {
+    return `run_fetch_err=${String((err as Error)?.message ?? err).slice(0, 80)}`;
+  }
 }
 
 async function callApifyActor(
@@ -210,11 +249,23 @@ async function callApifyActor(
       // echoed token to be paranoid even though Apify doesn't do this today.
       const raw = (await res.text()).slice(0, 400);
       const sanitized = raw.replace(new RegExp(token, "g"), "[REDACTED]");
+
+      // If Apify gave us a run ID, fetch the run meta to learn WHY the run
+      // failed (proxy access, compute cap, pageFunction throw, etc.).
+      const runIdMatch = sanitized.match(RUN_ID_RE);
+      let detail = `apify_${res.status}: ${sanitized}`;
+      let runId: string | undefined;
+      if (runIdMatch) {
+        runId = runIdMatch[1];
+        const diag = await fetchRunDiagnostics(runId, token);
+        detail = `apify_${res.status} run=${runId} ${diag}`;
+      }
       return {
         ok: false,
         kind: "http",
-        detail: `apify_${res.status}: ${sanitized}`,
+        detail,
         actorTried: actor,
+        runId,
       };
     }
     const json: unknown = await res.json();
@@ -380,22 +431,25 @@ export async function POST(request: Request): Promise<Response> {
   // Residential proxy is the key ingredient — WebMotors' Akamai firewall 403s
   // datacenter IPs aggressively, but the residential pool is their customers'
   // real browsers, so requests look legit.
+  // NOTE on proxy: explicitly NOT pinning `apifyProxyGroups: ["RESIDENTIAL"]`.
+  // Residential is paid-only on Apify — free-tier accounts get "access denied"
+  // and the run fails immediately. By leaving proxyGroups off, Apify picks
+  // whatever proxy class the account has access to (datacenter on free,
+  // residential on Starter+). For free-tier accounts this is essentially
+  // unreliable against WebMotors' Akamai protection, but attempting at all
+  // is better than a guaranteed "proxy not available" error.
   const result = await callApifyActor(
     SCRAPER_ACTOR,
     {
       startUrls: [{ url: cleanUrl }],
       pageFunction: PAGE_FUNCTION,
-      proxyConfiguration: {
-        useApifyProxy: true,
-        apifyProxyGroups: ["RESIDENTIAL"],
-      },
+      proxyConfiguration: { useApifyProxy: true },
       useChrome: true,
       waitUntil: ["networkidle0"],
       maxRequestsPerCrawl: 1,
       maxConcurrency: 1,
       maxPagesPerCrawl: 1,
       ignoreSslErrors: false,
-      ignoreCorsAndCsp: true,
       downloadMedia: false,
       downloadCss: false,
       headless: true,
