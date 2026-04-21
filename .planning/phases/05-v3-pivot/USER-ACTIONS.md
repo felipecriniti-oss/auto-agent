@@ -4,23 +4,25 @@ Todas independentes e podem ser feitas agora enquanto eu trabalho no shell. Nenh
 
 ---
 
-## 1. DNS — conectar autoagente.ai ao Vercel (2-3 min)
+## 1. DNS — conectar `app.autoagente.ai` ao Vercel (2-3 min)
+
+**Decisão (2026-04-21):** o apex `autoagente.ai` JÁ é a landing Astro de produção — não mexer. Dashboard do v3 vai em **subdomínio `app.autoagente.ai`**.
 
 **Passo a passo:**
 
-1. Abra https://vercel.com → Projects → `auto-agent` (ou o nome do projeto deployado).
-2. Settings → Domains → **Add Domain**.
-3. Digite `autoagente.ai` → Add.
-4. O Vercel vai te mostrar os registros DNS necessários. Provavelmente vão ser:
-   - **A record** em `@` → `76.76.21.21`
-   - **CNAME** em `www` → `cname.vercel-dns.com`
-5. Acesse o painel do registrar onde você comprou o domínio (Registro.br, GoDaddy, Namecheap, etc.) e adicione EXATAMENTE esses registros.
-6. Propagação costuma ser rápida (~5-15 min) em TLD `.ai`.
-7. Quando propagar, Vercel vai marcar o domínio como "Valid Configuration" e emitir o cert SSL automaticamente.
+1. Painel do registrar onde você comprou o domínio → zona DNS de `autoagente.ai`.
+2. Adicione 1 registro:
+   - Tipo: **CNAME**
+   - Nome/Host: `app`
+   - Valor/Target: `cname.vercel-dns.com`
+   - TTL: padrão (auto ou 3600)
+3. https://vercel.com → Projects → `auto-agent` → Settings → Domains → **Add Domain** → digite `app.autoagente.ai` → Add.
+4. Aguarde 5-15 min (TLD `.ai` propaga rápido). Vercel emite cert SSL automaticamente quando validar.
+5. Quando "Valid Configuration" aparecer no Vercel, abra `https://app.autoagente.ai` → deve carregar o dashboard.
 
-**Me avisa quando:** o domínio estiver "Valid Configuration" no Vercel — aí eu adiciono os env vars e rewrite do Next.js se necessário.
+**Fallback caso registrar não aceite CNAME em subdomínio arbitrário** (raro): use ALIAS/ANAME em vez de CNAME, mesmo target.
 
-**Fallback se travar:** se o registrar não deixar um A record no apex (raro no `.ai`), use CNAME flattening ou ALIAS para `cname.vercel-dns.com`. Vercel documenta em https://vercel.com/docs/domains/working-with-domains/add-a-domain.
+**Fallback total** (caso DNS não propague a tempo): demo roda direto em `https://auto-agent-chi.vercel.app` — funcional, só não tão branded. Zero risco.
 
 ---
 
@@ -86,9 +88,9 @@ A rota `/api/scrape/webmotors` lê o token do env `APIFY_API_TOKEN` (exato, case
 
 ### Pendente do usuário (bloqueio para demo de sexta)
 
-- [ ] **DNS autoagente.ai** apontando para Vercel (A record `76.76.21.21` no apex, CNAME `cname.vercel-dns.com` em `www`). 2-3 min no painel do registrar. **Sem isso o domínio não abre.**
-- [ ] **APIFY_API_TOKEN** no Vercel (Production + Preview + Development). **Sem isso o botão "Importar por URL" 500a** — não bloqueia Modo Piloto mas bloqueia demo de scraping real.
-- [ ] **ANTHROPIC_API_KEY** + **NEGOTIATION_ENABLED=true** no Vercel — verificar se já estão (muito provável que sim, mas double-check antes de sexta).
+- [x] **APIFY_API_TOKEN** no Vercel — confirmado 2026-04-21 pelo usuário
+- [x] **ANTHROPIC_API_KEY** + **NEGOTIATION_ENABLED=true** no Vercel — confirmado 2026-04-21 pelo usuário
+- [ ] **DNS `app.autoagente.ai` → Vercel** (subdomínio, não apex — apex está na landing Astro de produção). No painel do registrar adicione um **CNAME** em `app` apontando para `cname.vercel-dns.com`. No Vercel → Settings → Domains → Add `app.autoagente.ai`. Cert SSL é automático. **Sem isso o demo tem que rodar no URL `auto-agent-chi.vercel.app`** (fallback ok, só não tão bonito).
 
 ### Opcional (quinta-feira se sobrar tempo)
 
