@@ -34,8 +34,8 @@ export default function OnboardingModule(): React.JSX.Element {
           {greeting}.
         </h1>
         <p className="text-[15px] leading-relaxed text-slate-600 dark:text-slate-300">
-          Seu painel está pronto{personaLabel ? ` (plano ${plan.name} · ${personaLabel})` : ""}. Três
-          coisas pra fazer agora pra sentir o produto antes de falar com seu time de vendas.
+          Seu painel está pronto{personaLabel ? ` (plano ${plan.name} · ${personaLabel})` : ""}.
+          Três coisas pra fazer agora pra sentir o produto antes de falar com seu time de vendas.
         </p>
       </header>
 
