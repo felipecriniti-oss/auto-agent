@@ -5,7 +5,7 @@ milestone_name: milestone
 status: executing
 stopped_at: Phase 5 day-of-demo push — autoplay loop + Apify enrichment + dark mode shipped 2026-04-21
 last_updated: "2026-04-21T15:30:00.000Z"
-last_activity: 2026-04-21 -- Backstage autoplay (agent vs PF sim) + ribtools scraper field expansion + next-themes dark mode
+last_activity: 2026-04-22 -- Quick 260422-001: root / now serves AppShell (v3 dashboard) for workspace.autoagente.ai
 progress:
   total_phases: 6
   completed_phases: 0
@@ -136,6 +136,12 @@ Recent decisions affecting current work:
   state, existing chat engine) is ready — the missing piece is a
   sibling AutoplayBackstage component that runs negotiate→simulate-pf
   in a loop. Estimated half-day of focused work.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260422-001 | Root / renders AppShell (v3 dashboard) instead of PlaygroundModule | 2026-04-22 | b47c508 | [260422-001-root-to-appshell](./quick/260422-001-root-to-appshell/) |
 
 ## Deferred Items
 
