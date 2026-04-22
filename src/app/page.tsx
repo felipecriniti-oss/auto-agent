@@ -1,7 +1,7 @@
 "use client";
 
-import PlaygroundModule from "@/components/v3/modules/PlaygroundModule";
+import AppShell from "@/components/v3/AppShell";
 
-export default function NegotiationPage() {
-  return <PlaygroundModule />;
+export default function RootPage() {
+  return <AppShell />;
 }
