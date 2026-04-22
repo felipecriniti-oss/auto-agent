@@ -78,14 +78,19 @@ export default function SignupView(): React.JSX.Element {
 
       <div className="relative z-10 w-full max-w-[880px]">
         <div className="mb-8 flex items-center justify-between">
-          <Image
-            src="/logo.jpeg"
-            alt="AutoAgente"
-            width={520}
-            height={180}
-            className="h-11 w-auto select-none"
-            priority
-          />
+          <div className="flex items-center gap-2">
+            <Image
+              src="/autoagente-whatsapp.svg"
+              alt=""
+              width={40}
+              height={40}
+              className="h-10 w-10 select-none rounded-xl ring-1 ring-slate-200 dark:ring-slate-800"
+              priority
+            />
+            <span className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+              AutoAgente
+            </span>
+          </div>
           <a
             href="https://www.autoagente.ai"
             target="_blank"

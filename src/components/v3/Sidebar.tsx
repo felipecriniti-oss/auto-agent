@@ -143,13 +143,16 @@ export default function Sidebar(): React.JSX.Element {
         </button>
         <div className="flex items-center gap-2">
           <Image
-            src="/logo.jpeg"
-            alt="AutoAgente"
-            width={520}
-            height={180}
-            className="h-7 w-auto select-none dark:brightness-110"
+            src="/autoagente-whatsapp.svg"
+            alt=""
+            width={40}
+            height={40}
+            className="h-7 w-7 select-none rounded-lg ring-1 ring-slate-200 dark:ring-slate-800"
             priority
           />
+          <span className="font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+            AutoAgente
+          </span>
           <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
             · {activeLabel}
           </span>
@@ -177,13 +180,16 @@ export default function Sidebar(): React.JSX.Element {
         <div className="border-b border-slate-200/80 px-5 py-5 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <Image
-              src="/logo.jpeg"
-              alt="AutoAgente"
-              width={520}
-              height={180}
-              className="h-10 w-auto select-none dark:brightness-110"
+              src="/autoagente-whatsapp.svg"
+              alt=""
+              width={40}
+              height={40}
+              className="h-9 w-9 select-none rounded-xl ring-1 ring-slate-200 dark:ring-slate-800"
               priority
             />
+            <span className="font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+              AutoAgente
+            </span>
             <span className="ml-auto rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
               v3
             </span>
