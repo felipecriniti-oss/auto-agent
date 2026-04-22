@@ -5,7 +5,7 @@ milestone_name: milestone
 status: executing
 stopped_at: Phase 5 day-of-demo push — autoplay loop + Apify enrichment + dark mode shipped 2026-04-21
 last_updated: "2026-04-21T15:30:00.000Z"
-last_activity: 2026-04-22 -- Quick 260422-001: root / now serves AppShell (v3 dashboard) for workspace.autoagente.ai
+last_activity: 2026-04-22 -- Quick 260422-002: logo swap to autoagente-whatsapp.svg + dark mode contrast/hover/border rework
 progress:
   total_phases: 6
   completed_phases: 0
@@ -142,6 +142,7 @@ Recent decisions affecting current work:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260422-001 | Root / renders AppShell (v3 dashboard) instead of PlaygroundModule | 2026-04-22 | b47c508 | [260422-001-root-to-appshell](./quick/260422-001-root-to-appshell/) |
+| 260422-002 | Logo swap to autoagente-whatsapp.svg + dark mode contrast/hover/border rework | 2026-04-22 | 9b8e0bb | [260422-002-logo-and-darkmode-rework](./quick/260422-002-logo-and-darkmode-rework/) |
 
 ## Deferred Items
 
