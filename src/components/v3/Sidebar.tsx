@@ -8,6 +8,7 @@ import {
   Briefcase,
   Cpu,
   Handshake,
+  ListChecks,
   type LucideIcon,
   Menu,
   MessageSquare,
@@ -36,6 +37,12 @@ const GROUPS: SidebarGroup[] = [
   {
     label: "Operação",
     items: [
+      {
+        key: "wishlists",
+        label: "Wishlists",
+        icon: ListChecks,
+        description: "Carros que você quer",
+      },
       {
         key: "marketplace",
         label: "Marketplace",

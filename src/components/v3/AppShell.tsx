@@ -15,8 +15,10 @@ import OnboardingModule from "./modules/OnboardingModule";
 import PlaygroundModule from "./modules/PlaygroundModule";
 import RadarModule from "./modules/RadarModule";
 import SettingsModule from "./modules/SettingsModule";
+import WishlistModule from "./modules/WishlistModule";
 
 const MODULES: Record<AppModule, ComponentType> = {
+  wishlists: WishlistModule,
   marketplace: MarketplaceModule,
   myDeals: MyDealsModule,
   backstage: BackstageModule,
