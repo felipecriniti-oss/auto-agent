@@ -64,6 +64,13 @@ export default function ResetPasswordPage() {
       const supabase = getSupabaseBrowser();
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
       if (error) {
+        const msg = error.message.toLowerCase();
+        if (error.status === 429 || msg.includes("rate limit") || msg.includes("too many")) {
+          toast.error("Muitas tentativas em pouco tempo", {
+            description: "O serviço de email atingiu o limite. Tente novamente em ~1 hora.",
+          });
+          return;
+        }
         toast.error("Não conseguimos enviar o email", { description: error.message });
         return;
       }

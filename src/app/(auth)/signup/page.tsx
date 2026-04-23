@@ -72,18 +72,32 @@ export default function SignupPage() {
         },
       });
       if (error) {
+        const msg = error.message.toLowerCase();
         // Explicit duplicate — some Supabase configs return this directly.
         if (
-          error.message.toLowerCase().includes("already") ||
-          error.message.toLowerCase().includes("registered") ||
+          msg.includes("already") ||
+          msg.includes("registered") ||
           error.code === "user_already_exists"
         ) {
           setAlreadyRegistered(email.trim());
           return;
         }
-        if (error.code === "weak_password" || error.message.toLowerCase().includes("weak")) {
+        if (error.code === "weak_password" || msg.includes("weak")) {
           toast.error("Senha fraca", {
             description: "Escolha uma senha mais forte (ver indicador abaixo).",
+          });
+          return;
+        }
+        // 429 / SMTP rate limit — Supabase default SMTP é 3-4 emails/hora.
+        if (
+          error.status === 429 ||
+          error.code === "over_email_send_rate_limit" ||
+          msg.includes("rate limit") ||
+          msg.includes("too many")
+        ) {
+          toast.error("Muitas tentativas em pouco tempo", {
+            description:
+              "O serviço de email atingiu o limite. Tente novamente em ~1 hora, ou fale com o admin pra configurar SMTP próprio.",
           });
           return;
         }

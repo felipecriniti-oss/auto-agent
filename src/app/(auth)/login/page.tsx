@@ -74,6 +74,12 @@ export default function LoginPage() {
           });
           return;
         }
+        if (error.status === 429 || msg.includes("rate limit") || msg.includes("too many")) {
+          toast.error("Muitas tentativas", {
+            description: "Aguarde alguns minutos antes de tentar novamente.",
+          });
+          return;
+        }
         toast.error("Falha ao entrar", { description: error.message });
         return;
       }
