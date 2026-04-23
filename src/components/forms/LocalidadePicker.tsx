@@ -1,8 +1,20 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { UFS, cidadesDoUf } from "@/lib/brasil/localidades";
-import { useId, useMemo } from "react";
+import { cn } from "@/lib/utils";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { useId, useMemo, useState } from "react";
 
 interface LocalidadePickerProps {
   uf: string;
@@ -21,6 +33,18 @@ const selectClass =
 const labelClass =
   "font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400";
 
+/**
+ * Normalize for accent-insensitive search — "São Paulo" matches "sao paulo",
+ * "Poá" matches "poa" etc. Lower + NFD decompose + strip combining marks.
+ */
+function norm(s: string): string {
+  // Strip Unicode combining diacritical marks (U+0300–U+036F) after NFD decompose.
+  return s
+    .toLocaleLowerCase("pt-BR")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+}
+
 export function LocalidadePicker({
   uf,
   cidade,
@@ -32,7 +56,7 @@ export function LocalidadePicker({
   labelCidade = "Cidade",
 }: LocalidadePickerProps) {
   const ufId = useId();
-  const cidadeId = useId();
+  const [open, setOpen] = useState(false);
 
   const cidades = useMemo(() => cidadesDoUf(uf), [uf]);
   const cidadeDisabled = disabled || !uf;
@@ -68,26 +92,62 @@ export function LocalidadePicker({
         </select>
       </div>
       <div>
-        <Label htmlFor={cidadeId} className={labelClass}>
-          {labelCidade}
-        </Label>
-        <select
-          id={cidadeId}
-          value={cidade}
-          onChange={(e) => onCidadeChange(e.target.value)}
-          disabled={cidadeDisabled}
-          required={required}
-          className={selectClass}
-        >
-          <option value="" disabled>
-            {uf ? "Selecione a cidade" : "Selecione a UF primeiro"}
-          </option>
-          {cidades.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+        <Label className={labelClass}>{labelCidade}</Label>
+        <Popover open={open} onOpenChange={(next) => !cidadeDisabled && setOpen(next)}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              aria-expanded={open}
+              aria-haspopup="listbox"
+              disabled={cidadeDisabled}
+              className="mt-1.5 h-11 w-full justify-between bg-white font-normal disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-950"
+            >
+              <span className={cn(!cidade && "text-slate-400")}>
+                {cidade || (uf ? "Selecione ou digite a cidade" : "Selecione a UF primeiro")}
+              </span>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+            <Command filter={(value, search) => (norm(value).includes(norm(search)) ? 1 : 0)}>
+              <CommandInput placeholder="Digite pra filtrar..." className="h-10" />
+              <CommandList>
+                <CommandEmpty>Nenhuma cidade encontrada.</CommandEmpty>
+                <CommandGroup>
+                  {cidades.map((c) => (
+                    <CommandItem
+                      key={c}
+                      value={c}
+                      onSelect={(v) => {
+                        onCidadeChange(v);
+                        setOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn("mr-2 h-4 w-4", cidade === c ? "opacity-100" : "opacity-0")}
+                      />
+                      {c}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+        {required ? (
+          <input
+            type="text"
+            value={cidade}
+            onChange={() => {
+              /* controlled by combobox */
+            }}
+            required
+            tabIndex={-1}
+            aria-hidden="true"
+            className="pointer-events-none absolute h-0 w-0 opacity-0"
+          />
+        ) : null}
       </div>
     </div>
   );
