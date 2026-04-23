@@ -1,12 +1,20 @@
 ---
 phase: 11-inbound-agent-loop
-status: seeded
+status: DEFERRED
 created: 2026-04-22
-depends_on: [10-outreach-sender]
+deferred_at: 2026-04-22
+deferred_reason: pivot 3 — pai pediu para pausar trabalho no agente até algoritmo de negociação ser desenhado em papel
+depends_on: [10-outreach-sender, ALGORITHM-DESIGN-SESSION]
 estimated_duration: 4-5 days
 ---
 
-# Phase 11 — Inbound + agent loop
+# Phase 11 — Inbound + agent loop ⏸️ DEFERRED (2026-04-22)
+
+> **PAUSE:** Pivot 3 (`.planning/PIVOT-3.md`) pausou trabalho de agente até algoritmo de negociação ser desenhado em papel com pai.
+>
+> Não tocar nesta fase até confirmação explícita. Fluxo completo abaixo preservado como referência para quando algoritmo chegar.
+
+---
 
 ## Goal
 

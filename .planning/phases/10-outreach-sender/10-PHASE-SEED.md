@@ -1,12 +1,20 @@
 ---
 phase: 10-outreach-sender
-status: seeded
+status: DEFERRED
 created: 2026-04-22
-depends_on: [09-matching-engine]
+deferred_at: 2026-04-22
+deferred_reason: pivot 3 — pai pediu para pausar trabalho no agente até algoritmo ser desenhado em papel; infra vendável (6-9, 13a, 13b, 12) primeiro
+depends_on: [09-matching-engine, ALGORITHM-DESIGN-SESSION]
 estimated_duration: 4-5 days
 ---
 
-# Phase 10 — Outreach sender
+# Phase 10 — Outreach sender ⏸️ DEFERRED (2026-04-22)
+
+> **PAUSE:** Pivot 3 (`.planning/PIVOT-3.md`) pausou todo trabalho de agente+outreach. Só retoma depois que algoritmo de abordagem for definido em papel com pai.
+>
+> Não tocar nesta fase até confirmação explícita do user. Requisitos abaixo preservados como referência.
+
+---
 
 ## Goal
 

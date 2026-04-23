@@ -3,15 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 6 scaffolding shipped 2026-04-22 — awaiting user to create Supabase project + bot accounts before continuing Phase 6 execution
-last_updated: "2026-04-22T02:00:00.000Z"
-last_activity: 2026-04-22 -- Pivot 2 autonomous session: new roadmap 6-13 + Phase 6 scaffold + matching engine + outreach prompts + WishlistModule + MORNING.md handoff
+stopped_at: Phase 6 ~50% scaffolded — pivot 3 (2026-04-22 noite) pausou agente, promoveu billing/contratos, em execução autônoma overnight
+last_updated: "2026-04-22T23:00:00.000Z"
+last_activity: 2026-04-22 noite -- Pivot 3 reorg: 10/11 deferred, 13a (billing) + 13b (contracts) promoted, 12 reframed manual-contact, Supabase scale research completed
 progress:
-  total_phases: 13
+  total_phases: 11
   completed_phases: 2
-  total_plans: 25
+  deferred_phases: 3
+  total_plans: 23
   completed_plans: 15
-  percent: 15
+  percent: 18
 ---
 
 # Project State

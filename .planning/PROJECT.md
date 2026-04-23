@@ -1,16 +1,26 @@
 # AutoAgent — B2B Seminovos Marketplace
 
-## Pivot Notice (2026-04-22)
+## Pivot Notice (2026-04-22 noite — pivot 3)
 
-**Direction lock (2026-04-22):** pivot total para produto real, sem foco em demo Felipe. Sexta 2026-04-24 pode mostrar o shell v3 shipado como "UI final, motor vem nas próximas semanas". Trabalho efetivo passa a ser **Phases 6-13 na ordem**.
+**Direção atual:** Foundation-first. Backend/DB/auth/access-control/billing/contratos ANTES de qualquer trabalho em agente. Direção ditada por conversa com pai em 2026-04-22 noite: "primeiro temos que construir um algoritmo antes de você nos ajudar a construir". Ver `.planning/PIVOT-3.md`.
 
-**Decisões travadas:**
-- **WebMotors only** (sem OLX, sem Mercado Livre na MVP — simplifica scraping + pool de contas bot)
-- **Full automation, sem human-in-the-loop** — agente gera mensagem, submete pelo form interno do WebMotors, lê respostas do inbox bot, responde autonomamente via Claude. Lojista só vê threads read-only e assume deal quando converger.
-- **Lojista descreve wishlist em vez de colar URL** — resolve o paradoxo econômico "se ele achou o anúncio ele não paga fee"
-- **Supabase para DB + auth + realtime** — localStorage single-tenant morre na Phase 6
+**Fases ativas (execução autorizada):** 6 → 7 + 8 (parallel) → 9 → 13a → 13b → 12
 
-**Anterior (2026-04-21):** foco Phase 5 v3 shell com Backstage autoplay (shipped). Foi o MVP visual pra validar direção. Objetivo cumprido.
+**Fases deferred:** 10 (outreach sender), 11 (agent loop), 13c (escrow) — aguardam algoritmo de negociação ser desenhado em papel com pai.
+
+**Produto vendável ao fim de Phase 13b + 12:** lojista assina plano → cadastra wishlist → sistema scrapeia WebMotors → matching cria oportunidades → lojista paga fee pra revelar contato do PF → contata sozinho + gera contrato digital. Agente é diferenciador upsell em fase posterior.
+
+**Pivots anteriores:**
+- Pivot 1 (2026-04-21): Phase 5 v3 shell com Backstage autoplay (shipped).
+- Pivot 2 (2026-04-22 manhã): Phases 6-13 full-auto WebMotors agent.
+- **Pivot 3 (2026-04-22 noite): foundation-first, agent deferred.** ← ativo
+
+**Decisões travadas (cumulativas):**
+- **WebMotors only** na MVP
+- **Lojista descreve wishlist** em vez de colar URL
+- **Supabase para DB + auth + realtime** — Pro tier quando primeiro lojista pagar, +PITR antes de dinheiro real. Sem lock-in (Postgres puro). Ver `.planning/research/supabase-scale-2026-04-22.md`.
+- **Full automation sem HITL** (quando agente finalmente acordar, nada de lojista intervir no meio da thread)
+- **Fee manual primeiro, agent-negotiated depois** — Phase 12 inicial tem fee pago pra revelar contato PF; mecânica testável sem agente; quando agente existir, fee vira post-convergence.
 
 ## What This Is
 
@@ -33,23 +43,25 @@ AutoAgent é um marketplace transacional B2B para lojistas de seminovos. Lojista
 
 A proposta de valor é **volume + preço** que o lojista sozinho não consegue: lojista cadastra wishlist uma vez, sistema trabalha 24/7 achando e negociando, lojista só assume deals já pré-fechados abaixo de FIPE. Fee só faz sentido porque lojista **não conhecia o anúncio** nem fez a negociação.
 
-## Roadmap Atual (2026-04-22)
+## Roadmap Atual (pivot 3 — 2026-04-22 noite)
 
 | # | Phase | Status | Entrega |
 |---|---|---|---|
-| 1 | Chat Manual Funcional | ✅ shipped (reaproveitado) | Motor de negociação Claude, FIPE, streaming |
-| 2-4 | Inteligência / Batch / Análise | ⏸️ deferred | Merge parcial em Phase 3 (autoplay) |
-| 5 | v3 Product Shell (pivot 1) | ✅ shipped w/ shortcuts | Dashboard shell, Backstage autoplay, Apify on-demand URL-paste |
-| **6** | **Supabase foundation** | **🔜 NEXT** | Auth + DB + RLS + client migration |
-| 7 | Wishlist UI | seeded | Lojista cadastra carro alvo em vez de colar URL |
-| 8 | Scraping pipeline WebMotors | seeded | Apify schedule + listings table + dedup |
-| 9 | Matching engine | seeded | Listings → wishlists → opportunities |
-| 10 | Outreach sender | seeded | Bot accounts + sender actor + pending_outbox |
-| 11 | Inbound + agent loop | seeded | Receiver actor + Claude reply loop |
-| 12 | Inbox dashboard | seeded | Lojista vê threads realtime read-only |
-| 13 | Contracts + escrow + Stripe | seeded | PDF gen, ZapSign, escrow, billing |
+| 1 | Chat Manual Funcional | ✅ shipped | Motor de negociação preservado pra Phase 10 futuro |
+| 2-4 | Inteligência / Batch / Análise | ⏸️ deferred | — |
+| 5 | v3 Product Shell | ✅ shipped | Dashboard shell + autoplay + dark mode |
+| **6** | **Supabase foundation** | 🔜 **EM EXECUÇÃO** | Auth + DB + RLS + hooks substituindo Zustand (scaffold ~50%) |
+| 7 | Wishlist UI | seeded | WishlistModule contra DB, FIPE cascade, preview matches |
+| 8 | Scraping + hardening | seeded | Apify schedule + anti-bot + dead-letter + cost caps |
+| 9 | Matching engine | seeded | Pure function existe (23 testes); plug-in no DB |
+| **13a** | **Billing + access control** | **seeded 🆕** | Stripe Checkout + plan gating + quota enforcement |
+| **13b** | **Digital contracts** | **seeded 🆕** | ZapSign/DocuSign + template system + signed PDF storage |
+| 12 | Opportunities dashboard (manual contact) | reframed | Grid + detail + fee-gated PF contact reveal, SEM agente |
+| ~~10~~ | ~~Outreach sender~~ | ⏸️ **DEFERRED** | Pausado até algoritmo de abordagem |
+| ~~11~~ | ~~Agent loop~~ | ⏸️ **DEFERRED** | Pausado até algoritmo de negociação |
+| ~~13c~~ | ~~Escrow~~ | ⏸️ **DEFERRED** | Depende de agent deals |
 
-Estimativa: **~28-37 dias de dev** para produto vendável no fim da Phase 12. Phase 13 é closing completo.
+Estimativa (pivot 3): **~18-25 dias de dev** para produto vendável (sem agente) ao fim da Phase 12. Agent é upsell pós-algoritmo-design.
 
 ## Requirements
 
