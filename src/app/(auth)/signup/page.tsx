@@ -12,6 +12,7 @@
  * cidade, CNPJ optional).
  */
 
+import { GoogleIcon } from "@/components/icons/GoogleIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -260,9 +261,10 @@ export default function SignupPage() {
             variant="outline"
             onClick={handleGoogleSignUp}
             disabled={googleLoading}
-            className="h-11 w-full text-sm font-semibold"
+            className="h-11 w-full gap-2.5 text-sm font-medium"
           >
-            {googleLoading ? "Abrindo Google..." : "Continuar com Google"}
+            <GoogleIcon className="h-5 w-5" />
+            {googleLoading ? "Abrindo Google..." : "Entrar com Google"}
           </Button>
         </>
       )}
