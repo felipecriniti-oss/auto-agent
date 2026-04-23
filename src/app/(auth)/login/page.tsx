@@ -23,11 +23,14 @@ import { toast } from "sonner";
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const prefilledEmail = searchParams?.get("email") ?? "";
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(prefilledEmail);
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [resendingConfirmation, setResendingConfirmation] = useState(false);
+  const [emailNotConfirmed, setEmailNotConfirmed] = useState<string | null>(null);
 
   useEffect(() => {
     const err = searchParams?.get("error");
@@ -47,6 +50,7 @@ export default function LoginPage() {
   const handlePasswordSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!email.includes("@") || password.length < 6 || submitting) return;
+    setEmailNotConfirmed(null);
     setSubmitting(true);
     try {
       const supabase = getSupabaseBrowser();
@@ -55,7 +59,22 @@ export default function LoginPage() {
         password,
       });
       if (error) {
-        toast.error("Email ou senha incorretos", { description: error.message });
+        const msg = error.message.toLowerCase();
+        if (error.code === "email_not_confirmed" || msg.includes("not confirmed")) {
+          setEmailNotConfirmed(email.trim());
+          return;
+        }
+        if (
+          error.code === "invalid_credentials" ||
+          msg.includes("invalid login") ||
+          msg.includes("invalid credentials")
+        ) {
+          toast.error("Email ou senha incorretos", {
+            description: "Confira os dados ou clique em 'Esqueceu?' pra recuperar.",
+          });
+          return;
+        }
+        toast.error("Falha ao entrar", { description: error.message });
         return;
       }
       router.replace(redirect || "/app");
@@ -65,6 +84,32 @@ export default function LoginPage() {
       });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!emailNotConfirmed || resendingConfirmation) return;
+    setResendingConfirmation(true);
+    try {
+      const supabase = getSupabaseBrowser();
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: emailNotConfirmed,
+        options: { emailRedirectTo: callbackUrl },
+      });
+      if (error) {
+        toast.error("Não conseguimos reenviar", { description: error.message });
+        return;
+      }
+      toast.success("Email de confirmação reenviado", {
+        description: "Verifique sua caixa de entrada.",
+      });
+    } catch (err) {
+      toast.error("Erro inesperado", {
+        description: err instanceof Error ? err.message : "Tente novamente.",
+      });
+    } finally {
+      setResendingConfirmation(false);
     }
   };
 
@@ -168,6 +213,26 @@ export default function LoginPage() {
           <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </Button>
       </form>
+
+      {emailNotConfirmed ? (
+        <div className="mt-4 rounded-xl border border-amber-400/40 bg-amber-50 p-4 text-sm dark:border-amber-500/30 dark:bg-amber-950/30">
+          <div className="font-semibold text-amber-900 dark:text-amber-200">
+            Email ainda não confirmado
+          </div>
+          <p className="mt-1 text-[13px] text-slate-700 dark:text-slate-200">
+            Enviamos um link para <strong>{emailNotConfirmed}</strong> quando você se cadastrou.
+            Abre seu email e clica — ou pede um novo link abaixo.
+          </p>
+          <button
+            type="button"
+            onClick={handleResendConfirmation}
+            disabled={resendingConfirmation}
+            className="mt-3 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#4C46DC] hover:underline disabled:opacity-50"
+          >
+            {resendingConfirmation ? "Enviando..." : "Reenviar email de confirmação"}
+          </button>
+        </div>
+      ) : null}
 
       <div className="my-6 flex items-center gap-3">
         <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />

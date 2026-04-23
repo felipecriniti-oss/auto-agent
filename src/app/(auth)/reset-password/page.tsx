@@ -12,24 +12,30 @@
  *   new password form. Updating succeeds only with the recovery session.
  */
 
+import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { estimatePasswordStrength } from "@/lib/auth/password-strength";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { ArrowRight, Mail } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const MIN_PASSWORD = 8;
+const MIN_STRENGTH_SCORE = 2;
 
 type Phase = "request" | "sent" | "set-new";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefilledEmail = searchParams?.get("email") ?? "";
+
   const [phase, setPhase] = useState<Phase>("request");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(prefilledEmail);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -76,7 +82,10 @@ export default function ResetPasswordPage() {
 
   const passwordsMatch = password === confirm;
   const passwordOk = password.length >= MIN_PASSWORD;
-  const canSetNew = passwordOk && passwordsMatch;
+  const passwordStrongEnough =
+    password.length === 0 ||
+    estimatePasswordStrength(password, [email]).score >= MIN_STRENGTH_SCORE;
+  const canSetNew = passwordOk && passwordsMatch && passwordStrongEnough;
 
   const handleSetNew = async (e: FormEvent) => {
     e.preventDefault();
@@ -190,6 +199,7 @@ export default function ResetPasswordPage() {
               disabled={submitting}
               className="mt-1.5 h-11 bg-white dark:bg-slate-950"
             />
+            <PasswordStrengthMeter password={password} userInputs={[email]} />
           </div>
           <div>
             <Label

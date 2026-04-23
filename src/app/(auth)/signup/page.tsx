@@ -12,10 +12,12 @@
  * cidade, CNPJ optional).
  */
 
+import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { estimatePasswordStrength } from "@/lib/auth/password-strength";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { ArrowRight, Mail } from "lucide-react";
 import Link from "next/link";
@@ -24,6 +26,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const MIN_PASSWORD = 8;
+const MIN_STRENGTH_SCORE = 2; // zxcvbn "razoável" — blocks weak + very weak
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -33,6 +36,7 @@ export default function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [alreadyRegistered, setAlreadyRegistered] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -48,15 +52,19 @@ export default function SignupPage() {
   const passwordsMatch = password === confirm;
   const passwordOk = password.length >= MIN_PASSWORD;
   const emailOk = email.includes("@") && email.includes(".");
-  const canSubmit = emailOk && passwordOk && passwordsMatch && acceptTerms;
+  const passwordStrongEnough =
+    password.length === 0 ||
+    estimatePasswordStrength(password, [email]).score >= MIN_STRENGTH_SCORE;
+  const canSubmit = emailOk && passwordOk && passwordsMatch && passwordStrongEnough && acceptTerms;
 
   const handlePasswordSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!canSubmit || submitting) return;
+    setAlreadyRegistered(null);
     setSubmitting(true);
     try {
       const supabase = getSupabaseBrowser();
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
@@ -64,9 +72,33 @@ export default function SignupPage() {
         },
       });
       if (error) {
+        // Explicit duplicate — some Supabase configs return this directly.
+        if (
+          error.message.toLowerCase().includes("already") ||
+          error.message.toLowerCase().includes("registered") ||
+          error.code === "user_already_exists"
+        ) {
+          setAlreadyRegistered(email.trim());
+          return;
+        }
+        if (error.code === "weak_password" || error.message.toLowerCase().includes("weak")) {
+          toast.error("Senha fraca", {
+            description: "Escolha uma senha mais forte (ver indicador abaixo).",
+          });
+          return;
+        }
         toast.error("Não conseguimos criar a conta", { description: error.message });
         return;
       }
+
+      // Supabase privacy behavior: when "Confirm email" is on and the email
+      // already exists, signUp returns success BUT user.identities === [].
+      // This is the canonical way to detect duplicate without email enumeration.
+      if (data.user && (!data.user.identities || data.user.identities.length === 0)) {
+        setAlreadyRegistered(email.trim());
+        return;
+      }
+
       setSent(true);
       toast.success("Verifique seu email", {
         description: "Enviamos um link para confirmar sua conta.",
@@ -125,7 +157,43 @@ export default function SignupPage() {
         Crie sua conta em 1 minuto. Sem pagamento até o primeiro deal confirmado.
       </p>
 
-      {sent ? (
+      {alreadyRegistered ? (
+        <div className="mt-8 rounded-xl border border-amber-400/40 bg-amber-50 p-6 text-sm dark:border-amber-500/30 dark:bg-amber-950/30">
+          <div className="font-semibold text-amber-900 dark:text-amber-200">
+            Já existe uma conta com esse email
+          </div>
+          <p className="mt-2 text-slate-700 dark:text-slate-200">
+            <strong>{alreadyRegistered}</strong> já está cadastrado. Se a conta é sua, entra direto
+            no painel; se esqueceu a senha, use "recuperar senha".
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link
+              href={`/login?email=${encodeURIComponent(alreadyRegistered)}`}
+              className="inline-flex h-9 items-center rounded-md bg-[#4C46DC] px-4 text-[12px] font-semibold text-white hover:bg-[#3d38b8]"
+            >
+              Entrar
+            </Link>
+            <Link
+              href={`/reset-password?email=${encodeURIComponent(alreadyRegistered)}`}
+              className="inline-flex h-9 items-center rounded-md border border-slate-300 bg-white px-4 text-[12px] font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            >
+              Recuperar senha
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setAlreadyRegistered(null);
+                setEmail("");
+                setPassword("");
+                setConfirm("");
+              }}
+              className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 hover:text-[#4C46DC] hover:underline"
+            >
+              Usar outro email
+            </button>
+          </div>
+        </div>
+      ) : sent ? (
         <div className="mt-8 rounded-xl border border-[#4C46DC]/20 bg-[#4C46DC]/[0.04] p-6 text-sm dark:border-[#4C46DC]/30 dark:bg-[#4C46DC]/10">
           <div className="flex items-center gap-2 font-semibold text-[#4C46DC]">
             <Mail className="h-4 w-4" />
@@ -190,6 +258,7 @@ export default function SignupPage() {
                 disabled={submitting}
                 className="mt-1.5 h-11 bg-white dark:bg-slate-950"
               />
+              <PasswordStrengthMeter password={password} userInputs={[email]} />
             </div>
 
             <div>
