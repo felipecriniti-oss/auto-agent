@@ -3,9 +3,11 @@
 import { Toaster } from "@/components/ui/sonner";
 import { useAppStore } from "@/lib/stores/app";
 import type { AppModule } from "@/lib/stores/app";
-import type { ComponentType } from "react";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { useSupabaseUser } from "@/lib/supabase/hooks/useSupabaseUser";
+import { useRouter } from "next/navigation";
+import { type ComponentType, useEffect } from "react";
 import Sidebar from "./Sidebar";
-import SignupView from "./SignupView";
 import AdminModule from "./modules/AdminModule";
 import BackstageModule from "./modules/BackstageModule";
 import DashboardModule from "./modules/DashboardModule";
@@ -32,17 +34,25 @@ const MODULES: Record<AppModule, ComponentType> = {
 
 export default function AppShell() {
   const activeModule = useAppStore((s) => s.activeModule);
-  const onboardingComplete = useAppStore((s) => s.onboardingComplete);
   const ActiveComponent = MODULES[activeModule];
+  const { user, isLoading } = useSupabaseUser();
+  const router = useRouter();
 
-  // Fake-auth gate: if the lojista hasn't done the signup step, gate the whole
-  // /app behind SignupView. Real Supabase auth lands in Phase 6.
-  if (!onboardingComplete) {
+  // Belt-and-suspenders: middleware already redirects unauthed users to /login
+  // when Supabase is configured. This guards the client-rendered path for the
+  // brief window before middleware cookie-refresh settles, and degrades to a
+  // "press on" no-op if Supabase isn't yet wired up (pre-6.1 bootstrap).
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    if (isLoading) return;
+    if (!user) router.replace("/login");
+  }, [isLoading, user, router]);
+
+  if (isSupabaseConfigured() && !user) {
     return (
-      <>
-        <SignupView />
-        <Toaster richColors position="top-right" />
-      </>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="text-sm text-slate-500">Carregando...</div>
+      </div>
     );
   }
 

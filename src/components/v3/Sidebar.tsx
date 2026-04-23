@@ -3,6 +3,7 @@
 import ThemeToggle from "@/components/v3/ThemeToggle";
 import { plansConfig } from "@/lib/mock-data/v3";
 import { type AppModule, useAppStore } from "@/lib/stores/app";
+import { useProfile } from "@/lib/supabase/hooks/useProfile";
 import {
   BarChart3,
   Briefcase,
@@ -95,12 +96,6 @@ const PLAN_BADGE_STYLES: Record<string, string> = {
     "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:ring-amber-800",
 };
 
-const PERSONA_LABELS: Record<string, string> = {
-  investidor: "Investidor PJ",
-  lojista_micro: "Lojista Micro",
-  grupo_medio: "Grupo Médio",
-};
-
 function deriveInitials(name: string | null): string {
   if (!name) return "AA";
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -112,18 +107,14 @@ function deriveInitials(name: string | null): string {
 export default function Sidebar(): React.JSX.Element {
   const activeModule = useAppStore((s) => s.activeModule);
   const setActiveModule = useAppStore((s) => s.setActiveModule);
-  const currentPlan = useAppStore((s) => s.currentPlan);
-  const profileName = useAppStore((s) => s.profileName);
-  const profileCity = useAppStore((s) => s.profileCity);
-  const profilePersona = useAppStore((s) => s.profilePersona);
+  const { data: profile } = useProfile();
+  const currentPlan = profile?.plan ?? "starter";
   const plan = plansConfig[currentPlan];
 
+  const profileName = profile?.name ?? null;
+  const profileCity = profile?.city ?? null;
   const displayName = profileName ?? "Convidado";
-  const displaySubline = profileCity
-    ? profilePersona
-      ? `${PERSONA_LABELS[profilePersona] ?? "Lojista"} · ${profileCity}`
-      : profileCity
-    : "Piloto SP";
+  const displaySubline = profileCity ?? "Piloto SP";
   const initials = deriveInitials(profileName);
 
   const [mobileOpen, setMobileOpen] = useState(false);

@@ -2,23 +2,18 @@
 
 import { plansConfig } from "@/lib/mock-data/v3";
 import { useAppStore } from "@/lib/stores/app";
+import { useProfile } from "@/lib/supabase/hooks/useProfile";
 import { ArrowRight, MessageSquare, Rocket, ShoppingCart, Sparkles } from "lucide-react";
 
-const PERSONA_LABELS: Record<string, string> = {
-  investidor: "Investidor PJ",
-  lojista_micro: "Lojista Micro",
-  grupo_medio: "Grupo Médio",
-};
-
 export default function OnboardingModule(): React.JSX.Element {
-  const profileName = useAppStore((s) => s.profileName);
-  const profilePersona = useAppStore((s) => s.profilePersona);
-  const currentPlan = useAppStore((s) => s.currentPlan);
   const setActiveModule = useAppStore((s) => s.setActiveModule);
+  const { data: profile } = useProfile();
+  const currentPlan = profile?.plan ?? "starter";
   const plan = plansConfig[currentPlan];
 
+  const profileName = profile?.name ?? null;
   const greeting = profileName ? `Bem-vindo, ${profileName}` : "Bem-vindo ao AutoAgente";
-  const personaLabel = profilePersona ? PERSONA_LABELS[profilePersona] : null;
+  const personaLabel: string | null = null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 p-6 md:p-10">

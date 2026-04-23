@@ -51,8 +51,9 @@ export type WishlistInput = Omit<LocalWishlist, "id" | "created_at" | "updated_a
 };
 
 /**
- * Persona picker in the fake-signup flow maps to a default plan tier,
- * matching the personas profiled on autoagente.ai §07 PARA QUEM.
+ * Legacy persona type — kept as an alias during the Phase 6 migration so
+ * older mock-data imports still compile. New profile data comes from
+ * public.users via useProfile() and carries only a plan tier.
  */
 export type Persona = "investidor" | "lojista_micro" | "grupo_medio";
 
@@ -61,18 +62,12 @@ export type PilotStage = "idle" | "searching" | "found" | "done";
 interface AppState {
   activeModule: AppModule;
   currentPlan: PlanKey;
-  onboardingComplete: boolean;
   opportunities: Opportunity[];
   myDeals: MyDeal[];
   activeOpportunityId: number | null;
 
-  // wishlists — local state; migrates to Supabase in Phase 6
+  // wishlists — local state; migrates to Supabase in Phase 7
   wishlists: LocalWishlist[];
-
-  // profile (fake auth — real Supabase lands in Phase 6)
-  profileName: string | null;
-  profileCity: string | null;
-  profilePersona: Persona | null;
 
   // pilot / demo ergonomics
   pilotStage: PilotStage;
@@ -82,16 +77,9 @@ interface AppState {
   // actions
   setActiveModule: (module: AppModule) => void;
   setCurrentPlan: (plan: PlanKey) => void;
-  completeOnboarding: () => void;
   addOpportunity: (opp: Opportunity) => void;
   assumeDeal: (oppId: number) => void;
   setActiveOpportunity: (id: number | null) => void;
-  setProfile: (fields: {
-    name: string;
-    city: string;
-    persona: Persona;
-  }) => void;
-  resetProfile: () => void;
   startPilotStage: (stage: PilotStage) => void;
   markOpportunityAutoMode: (id: number, autoMode: boolean) => void;
 
@@ -102,29 +90,14 @@ interface AppState {
   deleteWishlist: (id: string) => void;
 }
 
-function personaToPlan(persona: Persona): PlanKey {
-  switch (persona) {
-    case "lojista_micro":
-      return "premium";
-    case "grupo_medio":
-      return "enterprise";
-    case "investidor":
-      return "starter";
-  }
-}
-
 function makeInitialState(): Pick<
   AppState,
   | "activeModule"
   | "currentPlan"
-  | "onboardingComplete"
   | "opportunities"
   | "myDeals"
   | "activeOpportunityId"
   | "wishlists"
-  | "profileName"
-  | "profileCity"
-  | "profilePersona"
   | "pilotStage"
   | "pilotDiscoveredIds"
   | "autoModeOpportunityIds"
@@ -132,14 +105,10 @@ function makeInitialState(): Pick<
   return {
     activeModule: "wishlists",
     currentPlan: "starter",
-    onboardingComplete: false,
     opportunities: mockOpportunities,
     myDeals: mockMyDeals,
     activeOpportunityId: null,
     wishlists: [],
-    profileName: null,
-    profileCity: null,
-    profilePersona: null,
     pilotStage: "idle",
     pilotDiscoveredIds: [],
     autoModeOpportunityIds: [],
@@ -161,8 +130,6 @@ export const useAppStore = create<AppState>()(
       setActiveModule: (module) => set({ activeModule: module }),
 
       setCurrentPlan: (plan) => set({ currentPlan: plan }),
-
-      completeOnboarding: () => set({ onboardingComplete: true }),
 
       addOpportunity: (opp) => set({ opportunities: [opp, ...get().opportunities] }),
 
@@ -193,23 +160,6 @@ export const useAppStore = create<AppState>()(
       },
 
       setActiveOpportunity: (id) => set({ activeOpportunityId: id }),
-
-      setProfile: ({ name, city, persona }) =>
-        set({
-          profileName: name,
-          profileCity: city,
-          profilePersona: persona,
-          currentPlan: personaToPlan(persona),
-          onboardingComplete: true,
-        }),
-
-      resetProfile: () =>
-        set({
-          profileName: null,
-          profileCity: null,
-          profilePersona: null,
-          onboardingComplete: false,
-        }),
 
       startPilotStage: (stage) => set({ pilotStage: stage }),
 
@@ -275,16 +225,13 @@ export const useAppStore = create<AppState>()(
     {
       name: "autoagent-app-v1",
       storage: createJSONStorage(() => localStorage),
-      version: 3,
+      version: 4,
       migrate: (persisted, version) => {
         if (version < 2) {
           const initial = makeInitialState();
           return {
             ...initial,
             ...(persisted as Partial<AppState>),
-            profileName: null,
-            profileCity: null,
-            profilePersona: null,
             pilotStage: "idle" as PilotStage,
             pilotDiscoveredIds: [],
             autoModeOpportunityIds: [],
@@ -298,18 +245,28 @@ export const useAppStore = create<AppState>()(
             wishlists: (persisted as { wishlists?: LocalWishlist[] }).wishlists ?? [],
           } as AppState;
         }
+        if (version < 4) {
+          // v3 → v4: drop profileName/profileCity/profilePersona/
+          // onboardingComplete — those fields now live in public.users
+          // (Supabase). Strip them defensively so older localStorage doesn't
+          // leak stale data into the UI.
+          const {
+            profileName: _n,
+            profileCity: _c,
+            profilePersona: _p,
+            onboardingComplete: _o,
+            ...rest
+          } = persisted as Record<string, unknown>;
+          return rest as unknown as AppState;
+        }
         return persisted as AppState;
       },
       partialize: (state) => ({
         activeModule: state.activeModule,
         currentPlan: state.currentPlan,
-        onboardingComplete: state.onboardingComplete,
         opportunities: state.opportunities,
         myDeals: state.myDeals,
         wishlists: state.wishlists,
-        profileName: state.profileName,
-        profileCity: state.profileCity,
-        profilePersona: state.profilePersona,
         autoModeOpportunityIds: state.autoModeOpportunityIds,
       }),
       onRehydrateStorage: () => (_state, error) => {

@@ -7,11 +7,13 @@ import PlanComparator from "@/components/v3/modules/dashboard/PlanComparator";
 import RecentActivity from "@/components/v3/modules/dashboard/RecentActivity";
 import { dashKPIs, monthlyDeals } from "@/lib/mock-data/v3";
 import { useAppStore } from "@/lib/stores/app";
+import { useProfile } from "@/lib/supabase/hooks/useProfile";
 
 export default function DashboardModule(): React.JSX.Element {
   const currentPlan = useAppStore((s) => s.currentPlan);
   const setCurrentPlan = useAppStore((s) => s.setCurrentPlan);
-  const profileName = useAppStore((s) => s.profileName);
+  const { data: profile } = useProfile();
+  const profileName = profile?.name ?? null;
 
   const greetingName = profileName?.split(" ")[0] ?? "lojista";
 
