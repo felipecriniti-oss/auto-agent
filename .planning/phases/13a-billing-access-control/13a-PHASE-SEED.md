@@ -10,7 +10,7 @@ priority: critical
 
 # Phase 13a — Billing + Access Control + Plan Gating
 
-> **Promovido de Phase 13** em pivot 3 (2026-04-22). Separado porque: (a) billing + plan gating é pré-requisito pra qualquer venda mesmo sem agente, (b) access control middleware é block pra Phase 12 (lojista só vê contato do PF se assinou plano ativo).
+> **Decomposição executiva da Phase 13** (pivot 3). Spec do PRD v3 preservada. Separado porque subscriptions + plan gating + fee infrastructure podem ser construídos sem depender de agente — a camada de fee trigger on "Assumir Deal" (PRD Phase 12) espera Phase 10/11 retornarem antes de ficar live.
 
 ## Goal
 
@@ -140,9 +140,9 @@ stripe_paid_at timestamptz
 status text check in ('pending','paid','failed','refunded')
 ```
 
-Cálculo de fee: `fee = savings * fee_rate`. Fee cobrada no "Assumir Deal" do Phase 12 (Checkout one-time).
+Cálculo de fee: `fee = savings * fee_rate`. Fee cobrada no "Assumir Deal" do Phase 12 pós-convergência do agente (per PRD v3 flow).
 
-**Mas:** o Phase 12 inicial (modo manual contact) ainda não tem "Deal assumido" no fluxo completo — lojista vê opportunity, paga fee pra revelar contato, contata PF sozinho. Isso mantém fee mechanics testáveis sem agente.
+**Nota de execução (pivot 3):** A infra de `deal_fees` + endpoint de Checkout one-time + webhook handler são construídos nessa fase. Porém o **trigger real** (botão "Assumir Deal" que destrava Checkout) só fica ativo quando Phase 10/11/12 retornarem — spec PRD mantida intocada. Durante Phase 13a execution, fee flow é testável via unit tests com mocks; UI do botão fica oculta até agent convergence existir.
 
 ## Tables (new)
 

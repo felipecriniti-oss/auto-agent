@@ -17,26 +17,26 @@ status: active
 ### Execução autorizada (construir agora)
 
 1. **Phase 6 — Supabase foundation** (em andamento)
-2. **Phase 7 — Wishlist UI contra DB real** (não contra Zustand)
-3. **Phase 8 — Scraping pipeline WebMotors + anti-bot hardening**
+2. **Phase 7 — Wishlist UI contra DB real**
+3. **Phase 8 — Scraping pipeline WebMotors + hardening**
 4. **Phase 9 — Matching engine** (plug-in da pure function no DB)
-5. **Phase 13a — Billing + plan gating (Stripe subscriptions + access control)** — PROMOVIDO de Phase 13
-6. **Phase 13b — Contratos digitais (ZapSign + PDF exclusividade + compra-e-venda)** — PROMOVIDO de Phase 13
-7. **Phase 12 (reframed) — Opportunities dashboard (modo contato manual, sem agente)**
+5. **Phase 13a — Billing + plan gating + Stripe subscriptions** (decomposição executiva de Phase 13)
+6. **Phase 13b — Contratos digitais DocuSign** (decomposição executiva de Phase 13, PRD-spec)
+
+Phase 13a e 13b constroem infra. **Triggers reais** (fee on Assumir Deal, botão "gerar contrato exclusividade") ficam ocultos na UI até Phase 10/11/12 retornarem — PRD flow preservado.
 
 ### Deferido até algoritmo ser desenhado com pai
 
-- **Phase 10 — Outreach sender** — AGENT SENDS MESSAGES → DEFER até algoritmo de abordagem definido
-- **Phase 11 — Inbound + agent loop** — AGENT NEGOTIATES → DEFER até algoritmo de negociação definido
-- **Phase 13c — Escrow** — depende de deals fechados pelo agente → DEFER
+- **Phase 10 — Outreach sender** — DEFER até algoritmo de abordagem definido
+- **Phase 11 — Inbound + agent loop** — DEFER até algoritmo de negociação definido
+- **Phase 12 — Inbox dashboard (PRD spec integral)** — DEFER, depende de 10/11
+- **Phase 13c — Escrow** — depende de agent deals → DEFER
 
-### Mudança em Phase 12
+### Correção 2026-04-22 noite (pós-discussão com pai)
 
-Antes (pivot 2): "Lojista vê threads do agente em tempo real, read-only, 'Assumir Deal' quando converger."
+**Phase 12 NÃO é reframed.** Mantém spec PRD v3 integral: "Inbox dashboard — lojista vê threads do agente em realtime, 'Assumir Deal' pós-convergência". Como Phase 12 depende de Phase 10/11 (que estão deferred), **Phase 12 também fica DEFERRED**. Não inventar caminho alternativo — pai pediu pra não mudar o plano dele.
 
-Agora (pivot 3): "Lojista vê oportunidades matching (do motor de matching Phase 9). Clica em uma → vê detalhes do anúncio + dados do PF + botão 'Entrar em contato'. Contato é liberado APÓS fee pago (Phase 13a). Sem agente negociando — lojista contata PF diretamente via WhatsApp/telefone do PF pego do scrape."
-
-Isso mantém o produto **vendável** sem depender do agente. O agente vira feature diferenciador Phase N+1 que o lojista enxerga como "agora deixa AutoAgent negociar por você — vai da sua cota X% de desconto adicional".
+**Não há "manual contact mode".** Produto vendável nessa iteração = subscription ativa + scraping rodando + matching criando opportunities + contratos infra pronta, aguardando agente retornar pra destravar o fluxo completo de "Assumir Deal".
 
 ## Nova sequência numérica
 

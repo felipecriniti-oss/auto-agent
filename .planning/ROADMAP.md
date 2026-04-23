@@ -36,11 +36,11 @@ Sequência de execução:
 | 7 | Wishlist UI (DB real) | seeded | 6 |
 | 8 | Scraping pipeline + hardening | seeded | 6 |
 | 9 | Matching engine (DB integration) | seeded | 7, 8 |
-| 13a | Billing + plan gating + Stripe | **NEW** (promoted) | 6 |
-| 13b | Digital contracts (DocuSign/ZapSign) | **NEW** (promoted) | 13a |
-| 12 | Opportunities dashboard (manual contact mode) | seeded (reframe) | 9, 13a |
-| ~~10~~ | ~~Outreach sender~~ | ⏸️ **DEFERRED** | algoritmo |
-| ~~11~~ | ~~Agent loop~~ | ⏸️ **DEFERRED** | algoritmo |
+| 13a | Billing + plan gating + Stripe (exec wave 1 of PRD P13) | **DECOMPOSED** | 6 |
+| 13b | Digital contracts DocuSign (exec wave 2 of PRD P13) | **DECOMPOSED** | 13a |
+| ~~10~~ | ~~Outreach sender~~ | ⏸️ **DEFERRED** | algoritmo em papel com pai |
+| ~~11~~ | ~~Agent loop~~ | ⏸️ **DEFERRED** | algoritmo em papel com pai |
+| ~~12~~ | ~~Inbox dashboard~~ | ⏸️ **DEFERRED** | depende de 10/11 (PRD flow) |
 | ~~13c~~ | ~~Escrow~~ | ⏸️ **DEFERRED** | agent deals |
 
 Referência: `.planning/PIVOT-3.md` para rationale completo da reorganização.
@@ -134,45 +134,35 @@ Referência: `.planning/PIVOT-3.md` para rationale completo da reorganização.
 - Plan gating middleware (`requireEnterprise()`, quota enforcement)
 - `usage_counters` table (DD queries: 10/50/∞)
 - Billing dashboard tab em `/app/settings`
-- `deal_fees` infra (testável sem agente — Phase 12 paga fee pra revelar contato PF)
+- `deal_fees` infra (construída; trigger real fica oculto até Phase 10/11/12 retornarem — PRD flow preservado)
 
 **Open question blocker:** pricing canônico — PRD v3 (R$197/499/1997) ou landing autoagente.ai (R$0+8% / R$1490+4% / R$5900+2.5%)? Decidir ANTES de codar Checkout.
 
 **UI hint:** yes (pricing + billing pages)
 
-### Phase 13b: Digital contracts (DocuSign/ZapSign) 🆕 PROMOVIDO
+### Phase 13b: Digital contracts (DocuSign) 🆕 DECOMPOSED
 
-**Goal:** Infra de geração e assinatura digital de contratos (exclusividade 7 dias + compra/venda).
-**Depends on:** Phase 13a (fee paga destrava contrato)
+**Goal:** Infra de geração e assinatura digital (exclusividade 7 dias + compra/venda) via DocuSign, conforme PRD v3.
+**Depends on:** Phase 13a
 **Estimate:** 3-4 days
 **Key deliverables:**
 - Template system (`docs/templates/exclusivity-v1.html`, `purchase-sale-v1.html`)
-- Provider abstraction (ZapSign primary, DocuSign fallback)
+- DocuSign eSignature client (JWT OAuth, envelope API)
 - Tables: `contract_templates`, `contracts`, `contract_events` (migration 0003)
-- Endpoints: `/api/contracts/exclusivity`, `/api/contracts/purchase-sale`, `/api/contracts/webhook`
+- Endpoints: `/api/contracts/exclusivity`, `/api/contracts/purchase-sale`, `/api/contracts/webhook` (DocuSign Connect)
 - Supabase Storage bucket `contracts/` (private)
-- UI integration em Phase 12
+- UI integration stub — botões só aparecem quando Phase 10/11/12 retornarem com convergência do agente (PRD flow)
 
-**UI hint:** no (PDF generation server-side), yes (status timeline in opportunities)
+**UI hint:** infra only (PDF gen server-side); user-visible buttons gated until agent phases return
 
-### Phase 12: Opportunities dashboard (manual contact mode) 🔄 REFRAMED
+### Phase 12: Inbox dashboard ⏸️ DEFERRED
 
-**Goal (novo pós-pivot-3):** Lojista vê oportunidades matching reais do DB. Clica em uma → vê detalhes listing + valida o match. Botão "Pagar fee e ver contato" destrava dados do PF (telefone do scrape). Lojista contata PF sozinho via WhatsApp. SEM agente negociando.
+**Spec preservada conforme PRD v3:** Lojista vê threads do agente em realtime read-only, "Assumir Deal" aparece quando convergir.
 
-**Depends on:** Phase 9 (opportunities existem) + Phase 13a (fee checkout)
-**Estimate:** 3-4 days (reduzido — sem thread UI realtime)
-**Key deliverables:**
-- `OpportunitiesModule` (substitui Marketplace URL-paste de Phase 5)
-- Filtros: status, wishlist, região, match_score
-- Detail drawer: listing info completa + FIPE + savings + motivation signals
-- Fee CTA: "Pagar R$ X e ver contato do vendedor" → Stripe Checkout one-time
-- Pós-pagamento: revela phone + name + city
-- "Gerar contrato de exclusividade" button (Phase 13b)
-- `DashboardModule` metrics reais (opportunities, deals, fee paid total)
+**Depends on:** Phase 11 (agent loop fornece threads)
+**Status:** DEFERRED — depende de Phase 10/11 que estão deferred aguardando algoritmo ser desenhado em papel com pai. Spec original em `.planning/phases/12-inbox-dashboard/12-PHASE-SEED.md` intocada.
 
-**Agent mode (futuro):** quando Phase 10/11 desbloqueia, adiciona thread UI realtime + status progressivo. Estrutura do Opportunities module preparada pra aceitar esse upgrade.
-
-**UI hint:** yes (grid + drawer + payment CTA)
+Não tentar caminhar em Phase 12 sem agente funcionando — PRD flow preserva "Assumir Deal" pós-convergência, não admite variante manual.
 
 ### Phase 10: Outreach sender ⏸️ DEFERRED
 

@@ -10,26 +10,17 @@ priority: high
 
 # Phase 13b — Digital Contracts (DocuSign)
 
-> **Promovido de Phase 13** em pivot 3. Separado porque contratos são valor agregado independente de agente.
+> **Decomposição executiva da Phase 13** (pivot 3). Spec do PRD v3 mantida integralmente. Separado porque template system + signing integration podem ser construídos paralelamente ao agente — o trigger real fica aguardando Phase 10/11 retornarem.
 
 ## Goal
 
-Infraestrutura pra gerar e assinar digitalmente:
+Infraestrutura pra gerar e assinar digitalmente (per PRD v3):
 1. **Exclusividade digital 7 dias** — PF se compromete a não vender pra outra pessoa enquanto AutoAgente fecha
 2. **Compra e venda** — contrato final entre lojista e PF após fechamento
 
-Assinatura via DocuSign embedded (spec do PRD v3) ou ZapSign como alternativa BR-native.
+**Provider:** DocuSign embedded (spec explícita do PRD v3). Custo: ~R$ 25/contrato.
 
-## Provider decision
-
-**PRD v3 especifica:** DocuSign. Custo: ~R$ 25/contrato.
-
-**Alternativas BR:**
-- **ZapSign** — BR-native, API simples, ~R$ 5-15/envelope. Melhor UX mobile.
-- **Clicksign** — BR, mais caro (~R$ 20), integrações enterprise.
-- **DocuSign BR** — global, mais caro (~R$ 25-40), mais aceito em enterprise.
-
-Recomendação: começar com **ZapSign** pra MVP (custo menor + UX BR melhor), migrar pra DocuSign só se cliente enterprise exigir. Confirmar com user.
+Sem alternativas consideradas — PRD v3 é autoridade. Pai pesquisou DocuSign e decidiu. Não desviar.
 
 ## Scope
 
@@ -45,30 +36,16 @@ Render server-side via `src/lib/contracts/render.ts`:
 - Output: PDF bytes (via `@react-pdf/renderer` ou headless browser fallback)
 - PDFs persisted em Supabase Storage bucket `contracts/` (private, service-role write, RLS read por user owner)
 
-### 13b.2 — DocuSign / ZapSign client
+### 13b.2 — DocuSign client
 
-`src/lib/contracts/client.ts`:
-- Abstract `ContractProvider` interface
-- Implementation 1: `ZapSignProvider` (primary)
-- Implementation 2: `DocuSignProvider` (fallback / enterprise)
-- Selected via `CONTRACT_PROVIDER` env var
+`src/lib/contracts/docusign.ts`:
+- DocuSign eSignature REST API client
+- JWT OAuth authentication (server-side only, uses `DOCUSIGN_INTEGRATION_KEY`, `DOCUSIGN_USER_ID`, `DOCUSIGN_ACCOUNT_ID`, `DOCUSIGN_PRIVATE_KEY`)
+- `sendForSignature(envelope)` → POST /accounts/{accountId}/envelopes
+- `fetchStatus(envelopeId)` → GET envelope status
+- Webhook handler for status updates (DocuSign Connect)
 
-API:
-```ts
-interface ContractProvider {
-  sendForSignature(input: {
-    documentId: string,
-    signers: Array<{ name, email, cpf?, phone? }>,
-    metadata: Record<string,any>
-  }): Promise<{ envelopeId: string, status: 'sent' }>
-
-  fetchStatus(envelopeId: string): Promise<{
-    status: 'sent'|'delivered'|'signed'|'declined'|'voided',
-    signedUrl?: string,
-    auditTrailUrl?: string
-  }>
-}
-```
+Conforme PRD v3, DocuSign é o provider único. Não abstrair pra multi-provider.
 
 ### 13b.3 — Tables (new migration 0003)
 
@@ -91,7 +68,7 @@ contracts (
   template_id text FK contract_templates,
   kind text CHECK IN ('exclusivity', 'purchase_sale'),
   pdf_url text,                  -- Supabase Storage URL
-  provider text CHECK IN ('zapsign','docusign'),
+  provider text DEFAULT 'docusign',
   provider_envelope_id text,
   provider_status text,           -- mirrored from provider webhook
   signed_pdf_url text,             -- audit-trailed signed version
@@ -116,18 +93,20 @@ contract_events (
 `POST /api/contracts/exclusivity`:
 - Input: `{ opportunity_id }`
 - Auth: user owns opportunity
-- Loads PF data from opportunity + listing (depends on scraping pipeline getting PF phone)
+- Loads PF data from opportunity + listing
 - Renders template + creates contract row
-- Sends via ZapSign
+- Sends via DocuSign
 - Returns envelope_id
+
+> **Gate PRD:** trigger real desse endpoint espera thread convergida do agente (Phase 11). Na execução atual, a infra é construída + testável com dados mock, mas o botão "gerar contrato de exclusividade" na UI só aparece pós-convergência per PRD.
 
 `POST /api/contracts/purchase-sale`:
 - Input: `{ deal_id }`
 - Auth: user owns deal + deal_fees.status='paid'
 - Renders template
-- Sends via ZapSign pra ambas partes (lojista + PF)
+- Sends via DocuSign pra ambas partes (lojista + PF)
 
-`POST /api/contracts/webhook` (ZapSign or DocuSign):
+`POST /api/contracts/webhook` (DocuSign Connect):
 - Validates signature
 - Updates `contracts.provider_status` + `signed_pdf_url` on signed event
 - On 'signed' for exclusivity: sets `deals.status='signed_exclusivity'`
@@ -149,16 +128,15 @@ Em Phase 12 opportunities dashboard:
 
 ## Open questions
 
-1. **DocuSign vs ZapSign?** Recomendo ZapSign MVP. Confirmar com user.
-2. **PF fornece CPF quando?** Provavelmente só no momento de "Assumir deal" — fluxo de pagamento revela que agente coletou telefone, lojista contata, consegue CPF, insere no sistema pra gerar contrato. Ajuste UX em Phase 12.
-3. **Template legal review?** Templates precisam validação jurídica antes de ir pra produção. USER action: contratar advogado.
-4. **e-signature legal validity BR?** Lei 14.063/2020 valida assinaturas eletrônicas simples (ZapSign qualifica). Qualificada só precisa em imóveis.
+1. **PF fornece CPF quando?** Provavelmente só no momento de "Assumir deal" pós-convergência (fluxo PRD v3 Phase 12). Ajuste UX em Phase 12 quando destravar.
+2. **Template legal review?** Templates precisam validação jurídica antes de ir pra produção. USER action: contratar advogado.
+3. **DocuSign SKU:** eSignature Business ou Advanced? Plan básico cobre os dois contratos. Advanced só se precisar de clauses tipo audio/video capture.
 
 ## Dependencies
 
 - Phase 13a (fee pago destrava contrato)
-- Phase 8 (scraping coleta PF phone)
-- USER: ZapSign ou DocuSign account
+- Phase 10/11 (DEFERRED — convergência do agente dispara exclusividade per PRD)
+- USER: DocuSign account (conforme PRD v3)
 - USER: Templates legais validados por advogado
 
 ## Success criteria

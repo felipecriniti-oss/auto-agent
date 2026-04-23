@@ -54,14 +54,14 @@ A proposta de valor é **volume + preço** que o lojista sozinho não consegue: 
 | 7 | Wishlist UI | seeded | WishlistModule contra DB, FIPE cascade, preview matches |
 | 8 | Scraping + hardening | seeded | Apify schedule + anti-bot + dead-letter + cost caps |
 | 9 | Matching engine | seeded | Pure function existe (23 testes); plug-in no DB |
-| **13a** | **Billing + access control** | **seeded 🆕** | Stripe Checkout + plan gating + quota enforcement |
-| **13b** | **Digital contracts** | **seeded 🆕** | ZapSign/DocuSign + template system + signed PDF storage |
-| 12 | Opportunities dashboard (manual contact) | reframed | Grid + detail + fee-gated PF contact reveal, SEM agente |
-| ~~10~~ | ~~Outreach sender~~ | ⏸️ **DEFERRED** | Pausado até algoritmo de abordagem |
-| ~~11~~ | ~~Agent loop~~ | ⏸️ **DEFERRED** | Pausado até algoritmo de negociação |
+| **13a** | **Billing + access control** (exec wave 1 PRD P13) | **decomposed** | Stripe subscriptions + plan gating + quota + fee infra |
+| **13b** | **Digital contracts DocuSign** (exec wave 2 PRD P13) | **decomposed** | Template system + DocuSign eSignature API (PRD-spec provider) |
+| ~~10~~ | ~~Outreach sender~~ | ⏸️ **DEFERRED** | Pausado até algoritmo em papel com pai |
+| ~~11~~ | ~~Agent loop~~ | ⏸️ **DEFERRED** | Pausado até algoritmo em papel com pai |
+| ~~12~~ | ~~Inbox dashboard (PRD spec)~~ | ⏸️ **DEFERRED** | Depende de 10/11 — PRD flow preservado sem variante |
 | ~~13c~~ | ~~Escrow~~ | ⏸️ **DEFERRED** | Depende de agent deals |
 
-Estimativa (pivot 3): **~18-25 dias de dev** para produto vendável (sem agente) ao fim da Phase 12. Agent é upsell pós-algoritmo-design.
+Estimativa (pivot 3): **~13-17 dias de dev** para infra completa pré-agente (Phases 6 + 7 + 8 + 9 + 13a + 13b). Agent work (10/11/12/13c) retoma quando algoritmo for desenhado com pai.
 
 ## Requirements
 
