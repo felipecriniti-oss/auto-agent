@@ -37,7 +37,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${geist.variable} ${fraunces.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen bg-background font-sans text-foreground antialiased">
+      <body
+        className="min-h-screen bg-background font-sans text-foreground antialiased"
+        suppressHydrationWarning
+      >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <ReactQueryProvider>{children}</ReactQueryProvider>
         </ThemeProvider>
