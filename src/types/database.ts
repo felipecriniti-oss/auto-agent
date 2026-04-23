@@ -2,6 +2,11 @@
 // After Phase 6 ships and the Supabase CLI is wired up, this file will be
 // replaced by `supabase gen types typescript`. For now, it is hand-maintained
 // so downstream code can compile before the Supabase project exists.
+//
+// NOTE: every table must declare `Relationships: []` (or actual FK relations)
+// so `@supabase/supabase-js` generics (`GenericTable.Relationships: GenericRelationship[]`)
+// narrow correctly in `.from(...).select(...)`. Without this, select results
+// fall back to `never` and downstream property access fails typecheck.
 
 export type Plan = "starter" | "premium" | "enterprise";
 export type UserRole = "lojista" | "admin";
@@ -49,6 +54,8 @@ export type Tables = {
       plan: Plan;
       role: UserRole;
       onboarding_complete: boolean;
+      city: string | null;
+      uf: string | null;
       created_at: string;
       updated_at: string;
     };
@@ -61,8 +68,11 @@ export type Tables = {
       plan?: Plan;
       role?: UserRole;
       onboarding_complete?: boolean;
+      city?: string | null;
+      uf?: string | null;
     };
     Update: Partial<Tables["users"]["Insert"]>;
+    Relationships: [];
   };
 
   wishlists: {
@@ -104,6 +114,7 @@ export type Tables = {
       status?: WishlistStatus;
     };
     Update: Partial<Tables["wishlists"]["Insert"]>;
+    Relationships: [];
   };
 
   listings: {
@@ -145,6 +156,7 @@ export type Tables = {
       last_scraped_at?: string;
     };
     Update: Partial<Tables["listings"]["Insert"]>;
+    Relationships: [];
   };
 
   opportunities: {
@@ -170,6 +182,7 @@ export type Tables = {
       agent_thread_id?: string | null;
     };
     Update: Partial<Tables["opportunities"]["Insert"]>;
+    Relationships: [];
   };
 
   agent_threads: {
@@ -194,6 +207,7 @@ export type Tables = {
     };
     Insert: Partial<Omit<Tables["agent_threads"]["Row"], "id" | "created_at" | "updated_at">>;
     Update: Partial<Tables["agent_threads"]["Insert"]>;
+    Relationships: [];
   };
 
   agent_messages: {
@@ -220,6 +234,7 @@ export type Tables = {
       webmotors_message_id?: string | null;
     };
     Update: Partial<Tables["agent_messages"]["Insert"]>;
+    Relationships: [];
   };
 
   bot_accounts: {
@@ -240,6 +255,7 @@ export type Tables = {
     };
     Insert: Omit<Tables["bot_accounts"]["Row"], "id" | "created_at" | "updated_at">;
     Update: Partial<Tables["bot_accounts"]["Insert"]>;
+    Relationships: [];
   };
 
   pending_outbox: {
@@ -263,6 +279,7 @@ export type Tables = {
       status?: OutboxStatus;
     };
     Update: Partial<Tables["pending_outbox"]["Insert"]>;
+    Relationships: [];
   };
 
   scrape_runs: {
@@ -282,6 +299,7 @@ export type Tables = {
     };
     Insert: Partial<Omit<Tables["scrape_runs"]["Row"], "id" | "created_at">>;
     Update: Partial<Tables["scrape_runs"]["Insert"]>;
+    Relationships: [];
   };
 
   deals: {
@@ -309,6 +327,7 @@ export type Tables = {
       seller_contact_shared_at?: string | null;
     };
     Update: Partial<Tables["deals"]["Insert"]>;
+    Relationships: [];
   };
 
   subscriptions: {
@@ -332,6 +351,7 @@ export type Tables = {
       cancel_at_period_end?: boolean;
     };
     Update: Partial<Tables["subscriptions"]["Insert"]>;
+    Relationships: [];
   };
 
   opt_out_list: {
@@ -348,6 +368,7 @@ export type Tables = {
       reason?: string | null;
     };
     Update: Partial<Tables["opt_out_list"]["Insert"]>;
+    Relationships: [];
   };
 };
 
@@ -374,8 +395,10 @@ export type Database = {
           last_pf_message_at: string | null;
           last_agent_message_at: string | null;
         };
+        Relationships: [];
       };
     };
+    Functions: Record<string, never>;
   };
 };
 
