@@ -75,7 +75,35 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Onboarding gate. Authenticated users with onboarding_complete=false
+  // must complete /app/onboarding before any other /app/* route is usable.
+  // Conversely, users who've finished onboarding shouldn't see the wizard.
+  if (user && isProtectedPath(pathname)) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("onboarding_complete")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const isOnOnboarding = pathname === "/app/onboarding";
+    const needsOnboarding = !profile?.onboarding_complete;
+
+    if (needsOnboarding && !isOnOnboarding) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/app/onboarding";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+    if (!needsOnboarding && isOnOnboarding) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/app";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Authenticated users landing on /login get sent to /app
+  // (onboarding gate above will then route them correctly).
   if (pathname === "/login" && user) {
     const url = request.nextUrl.clone();
     url.pathname = "/app";

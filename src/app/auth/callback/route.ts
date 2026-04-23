@@ -37,23 +37,24 @@ export async function GET(request: NextRequest): Promise<Response> {
     return NextResponse.redirect(login);
   }
 
-  if (!code) {
-    const login = request.nextUrl.clone();
-    login.pathname = "/login";
-    login.search = "";
-    login.searchParams.set("error", "missing_code");
-    return NextResponse.redirect(login);
-  }
-
   try {
     const supabase = await getSupabaseServer();
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-    if (exchangeError) {
-      const login = request.nextUrl.clone();
-      login.pathname = "/login";
-      login.search = "";
-      login.searchParams.set("error", exchangeError.message);
-      return NextResponse.redirect(login);
+
+    // Supabase uses two email-link flows depending on provider / template:
+    //   (a) PKCE flow (OAuth, some magic-links): ?code=... → exchange.
+    //   (b) Implicit/verify flow (default for signup email confirmation):
+    //       the /auth/v1/verify endpoint already set the session cookies
+    //       before redirecting here, so no ?code= arrives.
+    // Try code exchange if present; otherwise rely on cookies already set.
+    if (code) {
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) {
+        const login = request.nextUrl.clone();
+        login.pathname = "/login";
+        login.search = "";
+        login.searchParams.set("error", exchangeError.message);
+        return NextResponse.redirect(login);
+      }
     }
 
     // Fetch the user to decide where to land them.
