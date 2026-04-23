@@ -16,9 +16,11 @@
  * post-auth instead of pre-auth.
  */
 
+import { LocalidadePicker } from "@/components/forms/LocalidadePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cidadeExisteNoUf } from "@/lib/brasil/localidades";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { useSupabaseUser } from "@/lib/supabase/hooks/useSupabaseUser";
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
@@ -26,36 +28,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
-
-const UFS = [
-  "AC",
-  "AL",
-  "AP",
-  "AM",
-  "BA",
-  "CE",
-  "DF",
-  "ES",
-  "GO",
-  "MA",
-  "MT",
-  "MS",
-  "MG",
-  "PA",
-  "PB",
-  "PR",
-  "PE",
-  "PI",
-  "RJ",
-  "RN",
-  "RS",
-  "RO",
-  "RR",
-  "SC",
-  "SP",
-  "SE",
-  "TO",
-] as const;
 
 type Step = 1 | 2;
 
@@ -77,7 +49,7 @@ export default function OnboardingPage() {
   const [name, setName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [city, setCity] = useState("");
-  const [uf, setUf] = useState<string>("SP");
+  const [uf, setUf] = useState<string>("");
   const [cnpj, setCnpj] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -89,7 +61,11 @@ export default function OnboardingPage() {
   }, [isLoading, user, router]);
 
   const step1Valid =
-    name.trim().length >= 2 && companyName.trim().length >= 2 && city.trim().length >= 2;
+    name.trim().length >= 2 &&
+    companyName.trim().length >= 2 &&
+    !!uf &&
+    !!city &&
+    cidadeExisteNoUf(uf, city);
 
   const handleStep1 = (e: FormEvent) => {
     e.preventDefault();
@@ -241,46 +217,13 @@ export default function OnboardingPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_120px]">
-                <div>
-                  <Label
-                    htmlFor="city"
-                    className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
-                  >
-                    Cidade
-                  </Label>
-                  <Input
-                    id="city"
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="São Paulo"
-                    autoComplete="address-level2"
-                    required
-                    className="mt-1.5 h-11 bg-white dark:bg-slate-950"
-                  />
-                </div>
-                <div>
-                  <Label
-                    htmlFor="uf"
-                    className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
-                  >
-                    UF
-                  </Label>
-                  <select
-                    id="uf"
-                    value={uf}
-                    onChange={(e) => setUf(e.target.value)}
-                    className="mt-1.5 h-11 w-full rounded-lg border border-input bg-white px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-slate-950"
-                  >
-                    {UFS.map((u) => (
-                      <option key={u} value={u}>
-                        {u}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              <LocalidadePicker
+                uf={uf}
+                cidade={city}
+                onUfChange={setUf}
+                onCidadeChange={setCity}
+                required
+              />
 
               <div className="flex items-center justify-end border-t border-slate-100 pt-5 dark:border-slate-800">
                 <Button

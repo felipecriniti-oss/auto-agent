@@ -1,14 +1,17 @@
 "use client";
 
 /**
- * /login — email magic-link + Google OAuth.
+ * /login — password-primary auth with magic-link fallback.
  *
- * Success path (magic link): Supabase sends the one-time code to the email.
- *   User clicks it → Supabase redirects to /auth/callback?code=... → callback
- *   exchanges for session → redirect to /app (or /app/onboarding).
+ * Primary path: email + password via signInWithPassword — fast, familiar to
+ *   dealer audience. Session established immediately on valid credentials.
  *
- * Success path (Google OAuth): Supabase redirects to Google → back to
- *   /auth/callback → same exchange → redirect.
+ * Fallback path: "Entrar sem senha" toggles to magic-link mode for users who
+ *   forgot/don't have a password yet. Supabase sends one-time code to email;
+ *   click lands on /auth/callback?code=... → session → /app.
+ *
+ * Google OAuth (future): button kept in markup, disabled if provider not yet
+ *   configured in Supabase dashboard.
  */
 
 import { Button } from "@/components/ui/button";
@@ -17,18 +20,23 @@ import { Label } from "@/components/ui/label";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { ArrowRight, Mail } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+type Mode = "password" | "magicLink";
+
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Surface callback errors (?error=...) via toast once on mount.
+  const [mode, setMode] = useState<Mode>("password");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [magicSent, setMagicSent] = useState(false);
+
   useEffect(() => {
     const err = searchParams?.get("error");
     if (err) {
@@ -44,7 +52,31 @@ export default function LoginPage() {
     redirect ? `?redirect=${encodeURIComponent(redirect)}` : ""
   }`;
 
-  const handleEmailSubmit = async (e: FormEvent) => {
+  const handlePasswordSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!email.includes("@") || password.length < 6 || submitting) return;
+    setSubmitting(true);
+    try {
+      const supabase = getSupabaseBrowser();
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) {
+        toast.error("Email ou senha incorretos", { description: error.message });
+        return;
+      }
+      router.replace(redirect || "/app");
+    } catch (err) {
+      toast.error("Erro inesperado", {
+        description: err instanceof Error ? err.message : "Tente novamente.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleMagicLinkSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!email.includes("@") || submitting) return;
     setSubmitting(true);
@@ -52,15 +84,15 @@ export default function LoginPage() {
       const supabase = getSupabaseBrowser();
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
-        options: { emailRedirectTo: callbackUrl },
+        options: { emailRedirectTo: callbackUrl, shouldCreateUser: false },
       });
       if (error) {
         toast.error("Não conseguimos enviar o link", { description: error.message });
         return;
       }
-      setSent(true);
+      setMagicSent(true);
       toast.success("Verifique seu email", {
-        description: "Enviamos um link mágico para você entrar.",
+        description: "Enviamos um link para você entrar sem senha.",
       });
     } catch (err) {
       toast.error("Erro inesperado", {
@@ -81,10 +113,11 @@ export default function LoginPage() {
         options: { redirectTo: callbackUrl },
       });
       if (error) {
-        toast.error("Falha no Google", { description: error.message });
+        toast.error("Google não configurado ainda", {
+          description: "Use email + senha ou link mágico.",
+        });
         setGoogleLoading(false);
       }
-      // Otherwise: browser navigates to Google; no need to clear state.
     } catch (err) {
       toast.error("Erro inesperado", {
         description: err instanceof Error ? err.message : "Tente novamente.",
@@ -92,6 +125,9 @@ export default function LoginPage() {
       setGoogleLoading(false);
     }
   };
+
+  const canSubmitPassword = email.includes("@") && password.length >= 6;
+  const canSubmitMagic = email.includes("@");
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:p-10">
@@ -106,10 +142,12 @@ export default function LoginPage() {
         Bem-vindo <em className="italic text-[#4C46DC]">de volta</em>.
       </h1>
       <p className="mt-3 text-[15px] leading-relaxed text-slate-600 dark:text-slate-300">
-        Entre com seu email — enviamos um link mágico pra você acessar sem senha.
+        {mode === "password"
+          ? "Entre com seu email e senha."
+          : "Enviamos um link por email — sem precisar de senha."}
       </p>
 
-      {sent ? (
+      {magicSent ? (
         <div className="mt-8 rounded-xl border border-[#4C46DC]/20 bg-[#4C46DC]/[0.04] p-6 text-sm dark:border-[#4C46DC]/30 dark:bg-[#4C46DC]/10">
           <div className="flex items-center gap-2 font-semibold text-[#4C46DC]">
             <Mail className="h-4 w-4" />
@@ -121,17 +159,18 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => {
-              setSent(false);
+              setMagicSent(false);
               setEmail("");
+              setMode("password");
             }}
             className="mt-4 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#4C46DC] hover:underline"
           >
-            Usar outro email
+            Voltar
           </button>
         </div>
-      ) : (
+      ) : mode === "password" ? (
         <>
-          <form onSubmit={handleEmailSubmit} className="mt-8 space-y-4">
+          <form onSubmit={handlePasswordSubmit} className="mt-8 space-y-4">
             <div>
               <Label
                 htmlFor="email"
@@ -152,12 +191,41 @@ export default function LoginPage() {
               />
             </div>
 
+            <div>
+              <div className="flex items-center justify-between">
+                <Label
+                  htmlFor="password"
+                  className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
+                >
+                  Senha
+                </Label>
+                <Link
+                  href="/reset-password"
+                  className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#4C46DC] hover:underline"
+                >
+                  Esqueceu?
+                </Link>
+              </div>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                minLength={6}
+                required
+                disabled={submitting}
+                className="mt-1.5 h-11 bg-white dark:bg-slate-950"
+              />
+            </div>
+
             <Button
               type="submit"
-              disabled={submitting || !email.includes("@")}
+              disabled={submitting || !canSubmitPassword}
               className="group h-11 w-full bg-[#4C46DC] text-sm font-semibold text-white hover:bg-[#3d38b8] disabled:opacity-40"
             >
-              {submitting ? "Enviando..." : "Entrar com email"}
+              {submitting ? "Entrando..." : "Entrar"}
               <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Button>
           </form>
@@ -170,15 +238,67 @@ export default function LoginPage() {
             <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
           </div>
 
-          <Button
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setMode("magicLink")}
+              disabled={submitting}
+              className="h-11 w-full text-sm font-semibold"
+            >
+              Entrar sem senha (link por email)
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleGoogleSignIn}
+              disabled={googleLoading}
+              className="h-11 w-full text-sm font-semibold"
+            >
+              {googleLoading ? "Abrindo Google..." : "Continuar com Google"}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <form onSubmit={handleMagicLinkSubmit} className="mt-8 space-y-4">
+            <div>
+              <Label
+                htmlFor="email-magic"
+                className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
+              >
+                Email
+              </Label>
+              <Input
+                id="email-magic"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="voce@sua-loja.com.br"
+                autoComplete="email"
+                required
+                disabled={submitting}
+                className="mt-1.5 h-11 bg-white dark:bg-slate-950"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={submitting || !canSubmitMagic}
+              className="group h-11 w-full bg-[#4C46DC] text-sm font-semibold text-white hover:bg-[#3d38b8] disabled:opacity-40"
+            >
+              {submitting ? "Enviando..." : "Enviar link mágico"}
+              <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Button>
+          </form>
+
+          <button
             type="button"
-            variant="outline"
-            onClick={handleGoogleSignIn}
-            disabled={googleLoading}
-            className="h-11 w-full text-sm font-semibold"
+            onClick={() => setMode("password")}
+            className="mt-6 w-full text-center font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 hover:text-[#4C46DC] hover:underline"
           >
-            {googleLoading ? "Abrindo Google..." : "Entrar com Google"}
-          </Button>
+            ← Voltar para login com senha
+          </button>
         </>
       )}
 

@@ -1,12 +1,15 @@
 "use client";
 
 /**
- * /signup — email magic-link + Google OAuth signup.
+ * /signup — email + password signup with email confirmation.
  *
- * Magic-link + OAuth do double-duty for login and signup in Supabase — the
- * Postgres trigger `handle_new_auth_user` auto-creates the public.users row
- * on first auth. After verification the callback routes new users to
- * /app/onboarding where the profile is completed (name, company, cnpj…).
+ * Supabase signUp creates an auth.users row and sends a confirmation email
+ * (if "Confirm email" is enabled in dashboard — on by default).
+ *
+ * The Postgres trigger `handle_new_auth_user` creates the public.users row
+ * automatically. After email verification the /auth/callback route lands
+ * new users on /app/onboarding for profile completion (nome, empresa, UF,
+ * cidade, CNPJ optional).
  */
 
 import { Button } from "@/components/ui/button";
@@ -19,8 +22,12 @@ import { useSearchParams } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+const MIN_PASSWORD = 8;
+
 export default function SignupPage() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -37,22 +44,26 @@ export default function SignupPage() {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const callbackUrl = `${origin}/auth/callback`;
 
-  const handleEmailSubmit = async (e: FormEvent) => {
+  const passwordsMatch = password === confirm;
+  const passwordOk = password.length >= MIN_PASSWORD;
+  const emailOk = email.includes("@") && email.includes(".");
+  const canSubmit = emailOk && passwordOk && passwordsMatch && acceptTerms;
+
+  const handlePasswordSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!email.includes("@") || !acceptTerms || submitting) return;
+    if (!canSubmit || submitting) return;
     setSubmitting(true);
     try {
       const supabase = getSupabaseBrowser();
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error } = await supabase.auth.signUp({
         email: email.trim(),
+        password,
         options: {
           emailRedirectTo: callbackUrl,
-          // shouldCreateUser defaults to true — magic link handles both
-          // existing and new users.
         },
       });
       if (error) {
-        toast.error("Não conseguimos enviar o link", { description: error.message });
+        toast.error("Não conseguimos criar a conta", { description: error.message });
         return;
       }
       setSent(true);
@@ -84,7 +95,9 @@ export default function SignupPage() {
         options: { redirectTo: callbackUrl },
       });
       if (error) {
-        toast.error("Falha no Google", { description: error.message });
+        toast.error("Google não configurado ainda", {
+          description: "Use email + senha por enquanto.",
+        });
         setGoogleLoading(false);
       }
     } catch (err) {
@@ -94,8 +107,6 @@ export default function SignupPage() {
       setGoogleLoading(false);
     }
   };
-
-  const canSubmit = email.includes("@") && acceptTerms;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:p-10">
@@ -110,7 +121,7 @@ export default function SignupPage() {
         Largue <em className="italic text-[#4C46DC]">com a gente</em>.
       </h1>
       <p className="mt-3 text-[15px] leading-relaxed text-slate-600 dark:text-slate-300">
-        Cadastro em 1 minuto. Sem pagamento até o primeiro deal confirmado.
+        Crie sua conta em 1 minuto. Sem pagamento até o primeiro deal confirmado.
       </p>
 
       {sent ? (
@@ -120,14 +131,16 @@ export default function SignupPage() {
             Verifique seu email
           </div>
           <p className="mt-2 text-slate-700 dark:text-slate-200">
-            Enviamos um link mágico para <strong>{email}</strong>. Clique nele pra finalizar o
-            cadastro.
+            Enviamos um link de confirmação para <strong>{email}</strong>. Clique nele pra finalizar
+            o cadastro e entrar no painel.
           </p>
           <button
             type="button"
             onClick={() => {
               setSent(false);
               setEmail("");
+              setPassword("");
+              setConfirm("");
             }}
             className="mt-4 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#4C46DC] hover:underline"
           >
@@ -136,7 +149,7 @@ export default function SignupPage() {
         </div>
       ) : (
         <>
-          <form onSubmit={handleEmailSubmit} className="mt-8 space-y-4">
+          <form onSubmit={handlePasswordSubmit} className="mt-8 space-y-4">
             <div>
               <Label
                 htmlFor="email"
@@ -155,6 +168,52 @@ export default function SignupPage() {
                 disabled={submitting}
                 className="mt-1.5 h-11 bg-white dark:bg-slate-950"
               />
+            </div>
+
+            <div>
+              <Label
+                htmlFor="password"
+                className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
+              >
+                Senha (mínimo {MIN_PASSWORD} caracteres)
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="new-password"
+                minLength={MIN_PASSWORD}
+                required
+                disabled={submitting}
+                className="mt-1.5 h-11 bg-white dark:bg-slate-950"
+              />
+            </div>
+
+            <div>
+              <Label
+                htmlFor="confirm"
+                className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
+              >
+                Confirme a senha
+              </Label>
+              <Input
+                id="confirm"
+                type="password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="new-password"
+                required
+                disabled={submitting}
+                className="mt-1.5 h-11 bg-white dark:bg-slate-950"
+              />
+              {confirm && !passwordsMatch ? (
+                <p className="mt-1.5 text-[11px] text-red-600 dark:text-red-400">
+                  As senhas não conferem.
+                </p>
+              ) : null}
             </div>
 
             <label className="flex cursor-pointer items-start gap-2 text-[12px] text-slate-600 dark:text-slate-300">
@@ -183,7 +242,7 @@ export default function SignupPage() {
               disabled={submitting || !canSubmit}
               className="group h-11 w-full bg-[#4C46DC] text-sm font-semibold text-white hover:bg-[#3d38b8] disabled:opacity-40"
             >
-              {submitting ? "Enviando..." : "Continuar"}
+              {submitting ? "Criando conta..." : "Criar conta"}
               <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Button>
           </form>
