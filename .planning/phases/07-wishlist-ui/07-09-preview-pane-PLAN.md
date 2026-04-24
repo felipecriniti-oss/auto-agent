@@ -256,14 +256,14 @@ useListingsSnapshot(): UseQueryResult<DbListing[]>
     - src/lib/supabase/hooks/useListingsSnapshot.ts (from plan 07-05)
     - src/lib/mock-data/preview-listings.ts (from plan 07-01)
     - src/lib/wishlist/formValuesToPendingWishlist.ts (from task 07-09-01)
-    - .planning/phases/07-wishlist-ui/07-UI-SPEC.md §Copywriting Contract (Preview pane row: heading, loading, with matches, zero matches, expand), §Color (accent reserved — count is the ONE body-copy exception), §Interaction Contracts §Preview pane (lines 234-240)
+    - .planning/phases/07-wishlist-ui/07-UI-SPEC.md §Copywriting Contract (Preview pane row: heading, loading, with matches, zero matches, expand), §Color (accent reserved — count is the ONE body-copy exception), §Interaction Contracts §Preview pane (lines 234-240), §State Matrix §Preview pane (Skeleton allowed)
     - .planning/phases/07-wishlist-ui/07-PATTERNS.md Layer 3 §WishlistPreviewPane.tsx (lines 985-1089)
     - .planning/phases/07-wishlist-ui/07-RESEARCH.md §Pattern 3 (debounced preview pattern lines 420-471)
   </read_first>
   <behavior>
     - Reads current RHF values via `useWatch({ control })`
     - Debounces 400ms before recomputing count
-    - When `pending.brand || pending.model` is empty → returns Skeleton (count=null)
+    - When `pending.brand || pending.model` is empty → returns Skeleton (count=null). W6: UI-SPEC Copy row "Preview pane loading" specifies "Calculando matches..." but State Matrix §Preview pane permits Skeleton. Choosing Skeleton for consistency with RHF debounce feedback.
     - Calls `useListingsSnapshot()` for the listings universe
     - For each listing, calls `matchListingToWishlists(listing, [pending], { enforcePfOnly: false })`
     - Counts listings where `results.length > 0`
@@ -289,6 +289,8 @@ useListingsSnapshot(): UseQueryResult<DbListing[]>
     import { ChevronDown } from "lucide-react";
     import { useEffect, useMemo, useState } from "react";
     import { type Control, useWatch } from "react-hook-form";
+
+    // W6: UI-SPEC Copy row 'Preview pane loading' specifies "Calculando matches..." but State Matrix §Preview pane permits Skeleton. Choosing Skeleton for consistency with RHF debounce feedback.
 
     type Props = {
       control: Control<WishlistFormValues>;
@@ -350,6 +352,7 @@ useListingsSnapshot(): UseQueryResult<DbListing[]>
             Prévia de resultados
           </h3>
           {count === null ? (
+            // W6: Skeleton selected over "Calculando matches..." text per State Matrix §Preview pane allowance
             <div className="space-y-2">
               <Skeleton className="h-4 w-3/4" />
               <Skeleton className="h-4 w-1/2" />
@@ -586,6 +589,7 @@ useListingsSnapshot(): UseQueryResult<DbListing[]>
     - `grep -n "enforcePfOnly: false" src/components/forms/WishlistPreviewPane.tsx` returns 1 match (L6)
     - `grep -n "setTimeout(() => setDebounced" src/components/forms/WishlistPreviewPane.tsx` returns 1 match (inline 400ms debounce, no useDebounce helper)
     - `grep -n "scoreListings" src/components/forms/WishlistPreviewPane.tsx` returns 0 matches (L1 — wrong signature)
+    - `grep -n "W6" src/components/forms/WishlistPreviewPane.tsx` returns ≥1 match (inline comment documenting Skeleton-vs-text copy decision per State Matrix allowance)
     - `pnpm test src/components/forms/WishlistPreviewPane.test.tsx --run` exits 0 with ≥5 passing tests
     - `pnpm typecheck` exits 0
   </acceptance_criteria>
@@ -604,6 +608,7 @@ useListingsSnapshot(): UseQueryResult<DbListing[]>
 <success_criteria>
 - GOAL-PREVIEW shipped
 - L1 + L2 + L6 landmines all addressed
+- W6 (loading copy decision) documented inline
 - 13 tests across 2 files pass
 - Adapter is unit-testable in isolation
 - Debounce is inline (no useDebounce file)
@@ -614,4 +619,6 @@ After completion, create `.planning/phases/07-wishlist-ui/07-09-SUMMARY.md` with
 - Adapter + component architecture
 - Test count breakdown (8 + 5 = 13)
 - Landmine compliance confirmation (L1/L2/L6)
+- W6 documentation note: Skeleton chosen over "Calculando matches..." text per State Matrix §Preview pane allowance
 </output>
+</content>

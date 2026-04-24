@@ -93,7 +93,7 @@ const digits = raw.replace(/\D/g, "").slice(0, N);
     - Receiving value={130000} prop → input value shows "R$ 130.000"
     - Clearing input (delete all) → onChange(null); display shows empty placeholder
     - value={null} prop → display empty
-    - Pasting "abc130.000,50" → non-digits stripped → onChange(13000050) … NOTE: the period/comma are stripped along with letters, so "130.000" pastes to 130000 (integer reais — no cents per D-06). Test asserts paste of "130.000" yields 130000 not 130000000.
+    - Paste behavior (W12 — single unambiguous rule): Stripping rule: all non-digit characters are removed before parsing. 'R$ 130.000' → '130000' → 130000 (integer reais). 'abc130.000,50' → '13000050' (conceptually wrong BUT benign: Zod rejects price > 5,000,000 at submit time, so this input cannot pass validation). The component never attempts to interpret commas or periods as decimal separators — D-06 locks integer reais with no cents.
     - `disabled` prop disables the input
     - `pnpm typecheck` passes — Reais type imported
   </behavior>
@@ -122,6 +122,13 @@ const digits = raw.replace(/\D/g, "").slice(0, N);
      * - Stores integer reais (no cents) per D-06.
      * - Displays as `R$ 130.000` with pt-BR thousand separator.
      * - Emits null when cleared.
+     *
+     * Stripping rule (W12): all non-digit characters are removed before parsing.
+     *   'R$ 130.000' → '130000' → 130000 (integer reais).
+     *   'abc130.000,50' → '13000050' (conceptually wrong BUT benign: Zod rejects
+     *   price > 5,000,000 at submit time, so this input cannot pass validation).
+     * The component never attempts to interpret commas or periods as decimal
+     * separators — D-06 locks integer reais with no cents.
      */
     export function BrlCurrencyInput({
       value,
@@ -595,6 +602,7 @@ const digits = raw.replace(/\D/g, "").slice(0, N);
 - D-06 fully satisfied: BRL/km inputs round-trip integers without cents
 - Field hint copy matches UI-SPEC verbatim
 - Primitives expose `{ value, onChange }` props — RHF wrapper in plan 07-10 handles Controller integration
+- W12: BrlCurrencyInput paste-behavior paragraph is now a single unambiguous statement locking the stripping rule to the digit-only mask with no decimal interpretation
 - 19 tests total pass across the 3 primitives
 </success_criteria>
 
@@ -603,4 +611,6 @@ After completion, create `.planning/phases/07-wishlist-ui/07-06-SUMMARY.md` list
 - 3 files + 3 test files
 - Test count breakdown (7 + 6 + 6 = 19)
 - Confirmation: no `react-hook-form` imports (RHF-agnostic)
+- W12 note: paste-behavior JSDoc locks the digit-only stripping rule (no decimal parsing)
 </output>
+</content>

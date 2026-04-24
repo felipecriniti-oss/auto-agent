@@ -5,7 +5,7 @@ slug: wishlist-ui
 wave: 4
 title: "Sidebar rename (D-15) + Onboarding step 3 integration + final phase gate"
 depends_on:
-  - "07-10"   # WishlistFormSheet with layout='inline'
+  - "07-10"   # WishlistFormSheet with layout='inline' and submitLabel prop
   - "07-11"   # Module rewrite (ensures /app landing shows the new module)
 files_modified:
   - src/components/v3/Sidebar.tsx
@@ -25,8 +25,8 @@ must_haves:
     - "Sidebar renders label 'Minhas Wishlists' exactly once"
     - "Sidebar does NOT render a 'Marketplace' nav item"
     - "Onboarding now has 3 steps — Step union expanded, badge reads 'Passo {step} de 3'"
-    - "Step 3 renders WishlistFormSheet with layout='inline'"
-    - "Step 3 save flow: wishlist.insert THEN users.update onboarding_complete=true, both via existing Supabase hooks (non-atomic — L8 acknowledged)"
+    - "Step 3 renders WishlistFormSheet with layout='inline' and submitLabel='Salvar e começar' per UI-SPEC"
+    - "Step 3 save flow: wishlist.insert via useCreateWishlist hook (with success toast from the form sheet); onboarding_complete flip via direct supabase.from('users').update() (separate call, with its own loading overlay + success/error toast)."
     - "Step 3 skip flow: users.update onboarding_complete=true, route to /app, no wishlist insert"
     - "Skip button copy: 'Pular e fazer depois'"
     - "Onboarding hero h1 Fraunces: 'Cadastre seu primeiro carro-alvo'"
@@ -42,7 +42,7 @@ must_haves:
   key_links:
     - from: "src/app/app/onboarding/page.tsx"
       to: "src/components/v3/modules/WishlistFormSheet.tsx"
-      via: "inline rendering with onSaved"
+      via: "inline rendering with onSaved + submitLabel='Salvar e começar'"
       pattern: "<WishlistFormSheet"
 ---
 
@@ -187,10 +187,10 @@ getSupabaseBrowser().from("users").update({...}).eq("id", user.id)
   <files>src/app/app/onboarding/page.tsx, src/app/app/onboarding/page.test.tsx</files>
   <read_first>
     - src/app/app/onboarding/page.tsx (read fully all 306 lines — confirm Step type at line 32, handleStep2 at lines 76-108, badge at line 151)
-    - src/components/v3/modules/WishlistFormSheet.tsx (from plan 07-10 — confirm layout="inline" + onSaved prop)
+    - src/components/v3/modules/WishlistFormSheet.tsx (from plan 07-10 — confirm layout="inline" + onSaved + submitLabel props)
     - src/lib/supabase/client.ts (confirm getSupabaseBrowser)
     - src/lib/supabase/hooks/useSupabaseUser.ts (confirm useSupabaseUser)
-    - .planning/phases/07-wishlist-ui/07-UI-SPEC.md §Onboarding wizard integration (lines 243-248), §Copywriting Contract rows for onboarding hero/subtitle/CTA/skip
+    - .planning/phases/07-wishlist-ui/07-UI-SPEC.md §Onboarding wizard integration (lines 243-248), §Copywriting Contract rows for onboarding hero/subtitle/CTA/skip (onboarding CTA="Salvar e começar")
     - .planning/phases/07-wishlist-ui/07-CONTEXT.md §D-08/§D-11/§D-12 (reuse same schema, same fields, full-page flat)
     - .planning/phases/07-wishlist-ui/07-PATTERNS.md Layer 4 §onboarding/page.tsx modifications (lines 1336-1429)
     - .planning/phases/07-wishlist-ui/07-RESEARCH.md §Landmines [MEDIUM] Onboarding step 3 save cannot be atomic (L8)
@@ -254,7 +254,24 @@ getSupabaseBrowser().from("users").update({...}).eq("id", user.id)
     import { Button } from "@/components/ui/button";
     ```
 
-    Add JSX block for step === 3:
+    Add state for a step-3 loading overlay:
+
+    ```typescript
+    const [finalizing, setFinalizing] = useState(false);
+    ```
+
+    B5 — toast ordering + recovery path. The step-3 save flow is sequential and non-atomic (L8):
+
+    1. User clicks "Salvar e começar" → `WishlistFormSheet` internally runs `useCreateWishlist.mutateAsync(...)`.
+       On success, the form sheet ALREADY fires its own success toast (`Wishlist "<name>" criada`) and then invokes `onSaved(created)`.
+    2. `onSaved` here does the SECOND step, which is the onboarding_complete flip:
+       a. Set `finalizing = true` → renders a `Finalizando onboarding...` overlay (blocking + spinner).
+       b. `supabase.from("users").update({ onboarding_complete: true }).eq("id", user.id)`
+       c. On success → `router.push("/app")` + single additional toast `Onboarding concluído`.
+       d. On failure → `toast.error("Wishlist salva, mas falhou ao finalizar onboarding. Toque em 'Pular e fazer depois' pra continuar.")` AND the "Pular e fazer depois" button becomes the recovery path (user stays on step 3; clicking skip retries the onboarding_complete flip in isolation).
+    3. Skip flow (`Pular e fazer depois`): `supabase.from("users").update({ onboarding_complete: true }).eq("id", user.id)` → on success `router.push("/app")`; on failure → keep user on step 3 with `toast.error("Falha ao pular", { description: error.message })`.
+
+    Step 3 JSX:
 
     ```tsx
     {step === 3 && (
@@ -272,29 +289,49 @@ getSupabaseBrowser().from("users").update({...}).eq("id", user.id)
         </div>
         <WishlistFormSheet
           layout="inline"
+          submitLabel="Salvar e começar"
           onSaved={async () => {
-            // Sequential non-atomic (L8 acknowledged): onboarding_complete flip
-            // comes AFTER a successful wishlist insert. If insert succeeds and this
-            // fails, user is onboarded minus the flag flip — they'll re-hit step 3
-            // on next login, which is an acceptable degradation.
+            // B5: the form sheet already emitted its wishlist success toast. Here we perform
+            // the SECOND step (onboarding_complete flip) with its own loading overlay + toast.
+            // Sequential non-atomic (L8 acknowledged): if this step fails, user stays on step 3
+            // and can use the "Pular e fazer depois" button as a recovery path.
             if (!user) return;
-            const supabase = getSupabaseBrowser();
-            const { error } = await supabase
-              .from("users")
-              .update({ onboarding_complete: true })
-              .eq("id", user.id);
-            if (error) {
-              toast.error("Wishlist salva, mas houve erro ao finalizar onboarding", {
-                description: error.message,
-              });
-              return;
+            setFinalizing(true);
+            try {
+              const supabase = getSupabaseBrowser();
+              const { error } = await supabase
+                .from("users")
+                .update({ onboarding_complete: true })
+                .eq("id", user.id);
+              if (error) {
+                toast.error(
+                  "Wishlist salva, mas falhou ao finalizar onboarding. Toque em 'Pular e fazer depois' pra continuar.",
+                );
+                return;
+              }
+              toast.success("Onboarding concluído");
+              router.push("/app");
+            } finally {
+              setFinalizing(false);
             }
-            router.replace("/app");
           }}
         />
+        {finalizing && (
+          <div
+            aria-live="polite"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm"
+          >
+            <div className="rounded-md bg-white px-6 py-4 shadow-lg dark:bg-slate-900">
+              <p className="text-sm text-slate-700 dark:text-slate-200">
+                Finalizando onboarding...
+              </p>
+            </div>
+          </div>
+        )}
         <Button
           variant="ghost"
           type="button"
+          disabled={finalizing}
           onClick={async () => {
             if (!user || submitting) return;
             setSubmitting(true);
@@ -308,7 +345,7 @@ getSupabaseBrowser().from("users").update({...}).eq("id", user.id)
                 toast.error("Falha ao pular", { description: error.message });
                 return;
               }
-              router.replace("/app");
+              router.push("/app");
             } finally {
               setSubmitting(false);
             }
@@ -356,8 +393,8 @@ getSupabaseBrowser().from("users").update({...}).eq("id", user.id)
 
     // Mock the heavy form sheet so we don't need its full dep graph
     vi.mock("@/components/v3/modules/WishlistFormSheet", () => ({
-      WishlistFormSheet: ({ layout, onSaved }: { layout?: string; onSaved?: () => void }) => (
-        <div data-testid="wishlist-form-sheet" data-layout={layout}>
+      WishlistFormSheet: ({ layout, onSaved, submitLabel }: { layout?: string; onSaved?: () => void; submitLabel?: string }) => (
+        <div data-testid="wishlist-form-sheet" data-layout={layout} data-submit-label={submitLabel}>
           <button type="button" onClick={() => onSaved?.()}>Saved</button>
         </div>
       ),
@@ -379,7 +416,7 @@ getSupabaseBrowser().from("users").update({...}).eq("id", user.id)
     });
     ```
 
-    Note: Full step 3 render requires user to advance through steps 1+2 which requires filling forms + mocking `users` Supabase fetch. The smoke test above confirms the badge edit (proof the wizard is now 3-step). Deeper step-3 integration (Pular button flow, WishlistFormSheet onSaved flow) is acknowledged as manual QA per VALIDATION.md.
+    Note: Full step 3 render requires user to advance through steps 1+2 which requires filling forms + mocking `users` Supabase fetch. The smoke test above confirms the badge edit (proof the wizard is now 3-step). Deeper step-3 integration (Pular button flow, WishlistFormSheet onSaved flow, "Salvar e começar" submitLabel prop forwarding) is acknowledged as manual QA per VALIDATION.md.
   </action>
   <verify>
     <automated>pnpm test src/app/app/onboarding/page.test.tsx --run</automated>
@@ -390,6 +427,10 @@ getSupabaseBrowser().from("users").update({...}).eq("id", user.id)
     - `grep -n "Cadastre seu primeiro carro-alvo" src/app/app/onboarding/page.tsx` returns 1 match
     - `grep -n "Pular e fazer depois" src/app/app/onboarding/page.tsx` returns 1 match
     - `grep -n "layout=\"inline\"" src/app/app/onboarding/page.tsx` returns 1 match
+    - `grep -n "Salvar e começar" src/app/app/onboarding/page.tsx` returns 1 match (B3 — submitLabel prop passed to WishlistFormSheet)
+    - `grep -n "Finalizando onboarding" src/app/app/onboarding/page.tsx` returns ≥1 match (B5 — loading overlay copy)
+    - `grep -n "Onboarding concluído" src/app/app/onboarding/page.tsx` returns ≥1 match (B5 — success toast after onboarding_complete flip)
+    - `grep -n "Wishlist salva, mas falhou ao finalizar onboarding" src/app/app/onboarding/page.tsx` returns ≥1 match (B5 — error recovery copy)
     - `grep -n "onboarding_complete: true" src/app/app/onboarding/page.tsx` returns ≥2 matches (in onSaved and in skip handler — moved OUT of handleStep2)
     - `grep -n "<WishlistFormSheet" src/app/app/onboarding/page.tsx` returns ≥1 match
     - File `src/app/app/onboarding/page.test.tsx` exists; `pnpm test src/app/app/onboarding/page.test.tsx --run` exits 0 with ≥1 passing test
@@ -448,7 +489,8 @@ getSupabaseBrowser().from("users").update({...}).eq("id", user.id)
 
 <success_criteria>
 - D-15 fully closed: sidebar rename + removal complete
-- Onboarding wizard extended to 3 steps; step 3 renders WishlistFormSheet inline with save + skip flows
+- Onboarding wizard extended to 3 steps; step 3 renders WishlistFormSheet inline with `submitLabel="Salvar e começar"` + save + skip flows
+- B3 CTA copy "Salvar e começar" wired through submitLabel prop; B5 toast ordering (form sheet success toast → loading overlay → onboarding_complete flip → single additional "Onboarding concluído" toast, with "Wishlist salva, mas falhou ao finalizar onboarding..." error recovery path via Pular button) implemented
 - Phase gate green
 - Phase 7 ready to ship — lojista can sign up → complete onboarding → land on /app with first wishlist created (or skipped) → see grid → open sheet → create/edit/delete/pause/resume wishlists → observe live preview count
 </success_criteria>
@@ -456,7 +498,7 @@ getSupabaseBrowser().from("users").update({...}).eq("id", user.id)
 <output>
 After completion, create `.planning/phases/07-wishlist-ui/07-12-SUMMARY.md` documenting:
 - Sidebar change (label + removal)
-- Onboarding step 3 integration (non-atomic save, acknowledged L8)
+- Onboarding step 3 integration (non-atomic save with B5 toast ordering + recovery path; submitLabel="Salvar e começar" wired per B3)
 - Final gate results (`pnpm test && pnpm lint && pnpm typecheck && pnpm build` output)
 - Pointer to next phase (Phase 8 — scraping pipeline) or to /gsd-verify-work
 </output>
@@ -473,7 +515,7 @@ With all 12 plans executed, these are verifiable:
 5. **Preview pane** — "acharíamos X anúncios" live, debounced 400ms; falls back to mocks when DB empty
 6. **FIPE cascade** — brand snapshot instant paint; models on-demand via React Query; silent fallback on 5xx/timeout
 7. **Sidebar** — "Minhas Wishlists" label; no Marketplace entry
-8. **Onboarding step 3** — form embedded; save or skip flips onboarding_complete
+8. **Onboarding step 3** — form embedded with `submitLabel="Salvar e começar"`; save or skip flips onboarding_complete with toast ordering + recovery path per B5
 9. **Dark mode** — globals.css fallback layer carries chrome; accent strictly on 7 UI-SPEC loci
 10. **Phase gate** — `pnpm test && pnpm lint && pnpm typecheck && pnpm build` green
 11. **Zero Zustand imports in WishlistModule.tsx** — grep-verified
@@ -487,6 +529,7 @@ All landmines L1-L9 addressed by the plan structure:
 - L5 (no shadcn sheet) → plan 07-10 uses scaffold aside + Dialog pattern
 - L6 (enforcePfOnly false + status active) → plan 07-01 + 07-09
 - L7 (useCreateWishlist non-optimistic) → acknowledged in plan 07-10 (toast+close as feedback, no added onMutate)
-- L8 (non-atomic onboarding) → plan 07-12 uses sequential + toast on partial failure
+- L8 (non-atomic onboarding) → plan 07-12 uses sequential + loading overlay + toast on partial failure, with Pular as recovery path (B5)
 - L9 (Zustand imports removed) → plan 07-11 acceptance_criteria grep
 </phase_end_summary>
+</content>

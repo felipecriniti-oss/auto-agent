@@ -3,7 +3,7 @@ plan_id: "07-02"
 phase: 7
 slug: wishlist-ui
 wave: 1
-title: "useWishlists soft-delete migration + archived filter + test updates"
+title: "useWishlists soft-delete migration + archived filter + D-09 React Query config + test updates"
 depends_on: []
 files_modified:
   - src/lib/supabase/hooks/useWishlists.ts
@@ -16,6 +16,7 @@ must_haves:
   truths:
     - "useDeleteWishlist issues UPDATE {status:'archived'} — never DELETE FROM wishlists"
     - "useWishlists list query filters rows with status='archived'"
+    - "useWishlists' useQuery config includes staleTime: 30_000 and refetchOnWindowFocus: true per D-09"
     - "Existing optimistic onMutate/onError/onSettled is preserved — UI still sees immediate removal"
     - "Phase 6's 3 passing tests remain green after the migration"
   artifacts:
@@ -33,7 +34,9 @@ must_haves:
 ---
 
 <objective>
-Close landmine L3 as its OWN plan. Today `useDeleteWishlist` hard-deletes rows (`supabase.from("wishlists").delete()`); CONTEXT D-14 mandates soft-delete via `status="archived"`. This plan surgically edits the hook (2 edits) plus the co-located Phase 6 test file (update mock chain + add 2 new tests).
+Close landmine L3 as its OWN plan. Today `useDeleteWishlist` hard-deletes rows (`supabase.from("wishlists").delete()`); CONTEXT D-14 mandates soft-delete via `status="archived"`. This plan surgically edits the hook (3 edits) plus the co-located Phase 6 test file (update mock chain + add 2 new tests).
+
+Scope expansion per revision W11: while touching the hook, also verify/add the React Query config knobs mandated by D-09 — `staleTime: 30_000` and `refetchOnWindowFocus: true` on the `useQuery` call inside `useWishlists`.
 
 Purpose: Downstream Plan 07-11 (WishlistModule rewrite) and Plan 07-12 (onboarding/sidebar) both depend on the hook behaving correctly. If this migration is buried inside the module rewrite, Phase 6's existing tests break silently and the UI gets a schizophrenic data layer.
 Output: 2 files modified; hook tests all green; downstream consumers see identical API surface (hook names + return types unchanged).
@@ -56,7 +59,7 @@ Output: 2 files modified; hook tests all green; downstream consumers see identic
 <interfaces>
 <!-- Hook contract MUST remain unchanged for downstream consumers -->
 
-useWishlists(): UseQueryResult<DbWishlist[]>    // same
+useWishlists(): UseQueryResult<DbWishlist[]>    // same (but internal useQuery options expanded per D-09)
 useCreateWishlist(): UseMutationResult<DbWishlist, Error, WishlistInsertInput>   // unchanged
 useUpdateWishlist(): UseMutationResult<DbWishlist, Error, { id: string; patch: WishlistUpdateInput }>   // unchanged
 useDeleteWishlist(): UseMutationResult<string, Error, string>   // unchanged API — mutates behavior only
@@ -67,17 +70,17 @@ WishlistStatus: "active" | "paused" | "archived"   // "archived" is the new valu
 <tasks>
 
 <task id="07-02-01" type="auto" tdd="true">
-  <name>Task 1: Soft-delete the delete mutation + filter archived on list</name>
+  <name>Task 1: Soft-delete the delete mutation + filter archived on list + D-09 React Query config</name>
   <files>src/lib/supabase/hooks/useWishlists.ts</files>
   <read_first>
-    - src/lib/supabase/hooks/useWishlists.ts (read the whole file, all 155 lines — need current fetchWishlists at lines 28-37 and useDeleteWishlist at lines 119-155)
+    - src/lib/supabase/hooks/useWishlists.ts (read the whole file, all 155 lines — need current fetchWishlists at lines 28-37, useQuery config for `useWishlists`, and useDeleteWishlist at lines 119-155)
     - src/types/database.ts (confirm WishlistStatus enum includes "archived" — it does, line 100 approx)
-    - .planning/phases/07-wishlist-ui/07-CONTEXT.md §D-14 (soft delete lock)
+    - .planning/phases/07-wishlist-ui/07-CONTEXT.md §D-09 (React Query: staleTime 30s, refetchOnWindowFocus: true, no realtime subscription), §D-14 (soft delete lock)
     - .planning/phases/07-wishlist-ui/07-PATTERNS.md Layer 4 §useWishlists.ts modifications (exact before/after diffs at lines 1435-1485)
     - .planning/phases/07-wishlist-ui/07-RESEARCH.md §Pattern 4 Soft delete wrapper (lines 473-496)
   </read_first>
   <action>
-    Make TWO surgical edits to `src/lib/supabase/hooks/useWishlists.ts`:
+    Make THREE surgical edits to `src/lib/supabase/hooks/useWishlists.ts`:
 
     **Edit 1 — Append `.neq("status", "archived")` to fetchWishlists chain.**
 
@@ -142,6 +145,26 @@ WishlistStatus: "active" | "paused" | "archived"   // "archived" is the new valu
     },
     ```
 
+    **Edit 3 — Ensure D-09 React Query config on the list `useQuery`.**
+
+    Locate the `useQuery({ queryKey: ..., queryFn: () => fetchWishlists(...), ... })` inside the `useWishlists()` hook.
+
+    Verify it contains BOTH `staleTime: 30_000` (30 seconds) AND `refetchOnWindowFocus: true`.
+    If they are already present, leave as-is (no duplicate changes).
+    If missing, add them. The final shape should look like:
+
+    ```typescript
+    return useQuery({
+      queryKey: ["wishlists", user?.id],
+      queryFn: () => fetchWishlists(user!.id),
+      enabled: !!user,
+      staleTime: 30_000,                 // D-09: 30s stale window, no realtime
+      refetchOnWindowFocus: true,        // D-09: multi-device freshness on focus
+    });
+    ```
+
+    Do NOT add `refetchOnReconnect` (D-09 lists it but the React Query default is `true` already — no-op change otherwise).
+
     **DO NOT TOUCH** the `onMutate`/`onError`/`onSettled` block — optimistic filter-out logic stays correct (the card disappears from client state either way).
 
     **DO NOT TOUCH** `useCreateWishlist` or `useUpdateWishlist` — their contracts are unchanged.
@@ -155,6 +178,8 @@ WishlistStatus: "active" | "paused" | "archived"   // "archived" is the new valu
     - `grep -n "\.neq(\"status\", \"archived\")" src/lib/supabase/hooks/useWishlists.ts` returns exactly 1 match
     - `grep -n "\.update({ status: \"archived\" })" src/lib/supabase/hooks/useWishlists.ts` returns exactly 1 match
     - `grep -cE '\.delete\(\)' src/lib/supabase/hooks/useWishlists.ts` returns 0 (hard-delete fully removed)
+    - `grep -n "staleTime: 30" src/lib/supabase/hooks/useWishlists.ts` returns ≥1 match (W11 / D-09)
+    - `grep -n "refetchOnWindowFocus: true" src/lib/supabase/hooks/useWishlists.ts` returns ≥1 match (W11 / D-09)
     - `grep -n "useCreateWishlist\|useUpdateWishlist\|useDeleteWishlist\|useWishlists" src/lib/supabase/hooks/useWishlists.ts` returns ≥4 exports (API surface preserved)
     - `pnpm typecheck` exits 0
     - `pnpm lint` exits 0
@@ -275,17 +300,20 @@ WishlistStatus: "active" | "paused" | "archived"   // "archived" is the new valu
 - `pnpm typecheck` green
 - `pnpm lint` green
 - Downstream plans (07-11, 07-12) can call `useDeleteWishlist().mutate(id)` and observe: (a) no DELETE SQL issued, (b) local list immediately filters the row via onMutate, (c) server update({status:"archived"}) fires, (d) subsequent refetch hides the row via .neq filter.
+- D-09 wired: `useWishlists` now re-fetches on window focus and honors a 30s stale window.
 </verification>
 
 <success_criteria>
 - D-14 fully satisfied: hook contract unchanged from consumer perspective, server behavior flipped
+- D-09 fully satisfied: staleTime + refetchOnWindowFocus present on the list useQuery (W11)
 - Phase 6 tests remain green + 2 new assertions added
 - No breakage of `useCreateWishlist` / `useUpdateWishlist` paths
 </success_criteria>
 
 <output>
 After completion, create `.planning/phases/07-wishlist-ui/07-02-SUMMARY.md` documenting:
-- Exact diff applied to useWishlists.ts (2 surgical edits)
+- Exact diff applied to useWishlists.ts (3 surgical edits: soft-delete UPDATE, .neq filter, D-09 useQuery config knobs)
 - Test count before/after (3 → 5)
 - Confirmation that no consumer-facing type changed
 </output>
+</content>

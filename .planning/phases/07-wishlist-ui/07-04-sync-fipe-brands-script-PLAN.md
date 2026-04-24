@@ -4,8 +4,11 @@ phase: 7
 slug: wishlist-ui
 wave: 1
 title: "scripts/sync-fipe-brands.ts — manual snapshot generator"
-depends_on:
-  - "07-03"   # Script hits /api/fipe?type=brands (or Parallelum directly); either way 07-03 is the canonical contract
+# B4 resolution: the script fetches Parallelum DIRECTLY via native fetch (PARALLELUM_URL constant
+# points to `https://parallelum.com.br/fipe/api/v1/carros/marcas`). It does NOT route through the
+# local `/api/fipe` endpoint. Therefore it has no runtime dependency on plan 07-03 — the prior
+# `depends_on: ["07-03"]` was a topological misclassification. Dependency dropped; plan stays in wave 1.
+depends_on: []
 files_modified:
   - scripts/sync-fipe-brands.ts
   - package.json
@@ -184,6 +187,7 @@ Parallelum contract (public, no key):
 
     Key details:
     - Uses native `fetch` (Node 22 — verified in RESEARCH.md Environment Availability).
+    - Hits Parallelum DIRECTLY — no runtime dependency on the local `/api/fipe` route (plan 07-03). This is why this plan's `depends_on` is empty and wave is 1.
     - 15s timeout (longer than runtime's 5s — this is manual, network variance tolerated).
     - Sorts brands alphabetically by `nome` with pt-BR locale so `git diff` is stable across runs.
     - Writes with trailing newline to match the JSON file seeded in plan 07-01.
@@ -201,6 +205,7 @@ Parallelum contract (public, no key):
     - `grep -n "writeFileSync(OUTPUT_PATH" scripts/sync-fipe-brands.ts` returns 1 match
     - `grep -n "brands.sort" scripts/sync-fipe-brands.ts` returns 1 match (stable ordering)
     - `grep -n "brands.length < 50" scripts/sync-fipe-brands.ts` returns 1 match (sanity guard)
+    - `grep -n "/api/fipe" scripts/sync-fipe-brands.ts` returns 0 matches (direct Parallelum fetch, no dev-server dep)
     - `pnpm typecheck` exits 0
     - `pnpm lint` exits 0 for the new file
   </acceptance_criteria>
@@ -258,4 +263,6 @@ After completion, create `.planning/phases/07-wishlist-ui/07-04-SUMMARY.md` docu
 - Script location + invocation command
 - That the script was NOT run during this plan (snapshot already seeded by 07-01)
 - Note about future maintenance: "run `pnpm sync:fipe` when Parallelum drifts"
+- Topology note: this plan stays in wave 1 with empty depends_on because the script hits Parallelum directly (no runtime dep on plan 07-03's /api/fipe route)
 </output>
+</content>

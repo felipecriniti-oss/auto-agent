@@ -23,6 +23,8 @@ must_haves:
     - "Delete action opens shadcn AlertDialog — NOT window.confirm"
     - "AlertDialog auto-focuses Cancel button (UI-SPEC a11y)"
     - "Empty state heading reads 'Ainda sem wishlists' verbatim"
+    - "Empty state body reads UI-SPEC copy 'Descreva o primeiro carro que você quer comprar. Marca, modelo, ano, km, preço, região — quanto mais específico, melhor.' verbatim"
+    - "Empty state CTA button reads 'Criar primeira wishlist' verbatim and opens the form sheet in create mode"
     - "Error state card reads 'Não carregou suas wishlists. Recarregue a página ou tente em alguns minutos.' verbatim"
     - "Module imports summarize() from @/lib/wishlist/summarize (no duplicated helper)"
   artifacts:
@@ -94,7 +96,7 @@ AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialo
     - src/lib/supabase/hooks/useWishlists.ts (post-plan-07-02 — soft delete + archived filter wired)
     - src/lib/wishlist/summarize.ts (plan 07-10 output — import instead of inlining)
     - src/components/ui/alert-dialog.tsx (all 187 lines — AlertDialog primitive API)
-    - .planning/phases/07-wishlist-ui/07-UI-SPEC.md §Copywriting Contract (empty heading, empty body, error card, card actions, destructive dialog, toast strings), §Interaction Contracts §Delete flow, §State Matrix row "Module page"
+    - .planning/phases/07-wishlist-ui/07-UI-SPEC.md §Copywriting Contract (empty heading, empty body, empty CTA, error card, card actions, destructive dialog, toast strings), §Interaction Contracts §Delete flow, §State Matrix row "Module page"
     - .planning/phases/07-wishlist-ui/07-CONTEXT.md §D-13 (AlertDialog not window.confirm), §D-14 (soft-delete visual effect), §D-15 (module uses it but sidebar rename is plan 07-12)
     - .planning/phases/07-wishlist-ui/07-PATTERNS.md Layer 4 §WishlistModule.tsx (lines 1211-1282 — exact preserve/replace plan), Cross-Cutting §AlertDialog Template (lines 1740-1769 verbatim)
     - .planning/phases/07-wishlist-ui/07-RESEARCH.md §Pitfall 4 (useCreateWishlist is NOT optimistic — toast + close is feedback)
@@ -103,7 +105,7 @@ AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialo
     Rewrite `src/components/v3/modules/WishlistModule.tsx` in place. Strategy:
 
     **PRESERVE verbatim (copy-paste from the current file):**
-    - `EmptyState` component (approx lines 205-228) — only change heading to `"Ainda sem wishlists"` and body to UI-SPEC copy
+    - `EmptyState` component (approx lines 205-228) — only change heading to `"Ainda sem wishlists"`, body to UI-SPEC copy, and CTA button to the accent-color "Criar primeira wishlist" button per B1/B2 fixes below
     - `WishlistCard` (approx lines 230-329) — visual unchanged; update props to use `DbWishlist` instead of `LocalWishlist`
     - `Row` helper (approx lines 331-349) — unchanged
     - `Chip` helper (approx lines 351-367) — unchanged
@@ -127,7 +129,9 @@ AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialo
     - Grid: `grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4`
     - Loading state: render 3 shadcn `<Skeleton>` card placeholders
     - Error state: render a Card with `Não carregou suas wishlists. Recarregue a página ou tente em alguns minutos.`
-    - Empty state: render `EmptyState` with heading `Ainda sem wishlists` + body per UI-SPEC
+    - Empty state: render `EmptyState` with heading `Ainda sem wishlists`, body + CTA per B1/B2 below
+    - Empty state body copy: `Descreva o primeiro carro que você quer comprar. Marca, modelo, ano, km, preço, região — quanto mais específico, melhor.`
+    - Empty state CTA button: copy `Criar primeira wishlist`, style `bg-[#4C46DC] hover:bg-[#3f39c1] text-white`, onClick sets `formState = { open: true, mode: "create" }`
     - Summary helper call sites: replace any local `summarize(local)` with imported `summarize(dbWishlist)`
 
     **AlertDialog template** (paste from PATTERNS.md Cross-Cutting §AlertDialog Template lines 1740-1769):
@@ -193,6 +197,14 @@ AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialo
       + Nova Wishlist
     </Button>
 
+    // Empty state CTA button (B1 — inside EmptyState JSX)
+    <Button
+      onClick={() => setFormState({ mode: "create" })}
+      className="bg-[#4C46DC] hover:bg-[#3f39c1] text-white"
+    >
+      Criar primeira wishlist
+    </Button>
+
     // Sheet rendering (at module bottom)
     {formState !== null && (
       <WishlistFormSheet
@@ -216,6 +228,8 @@ AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialo
     Final `grep` self-check before commit:
     - `grep -n "useAppStore\|LocalWishlist\|from \"@/lib/stores/app\"" src/components/v3/modules/WishlistModule.tsx` MUST return 0 matches.
     - `grep -n "window.confirm\|confirm(" src/components/v3/modules/WishlistModule.tsx` MUST return 0 matches (scaffold line 181).
+    - `grep -n "Criar primeira wishlist" src/components/v3/modules/WishlistModule.tsx` MUST return 1 match (B1).
+    - `grep -n "Descreva o primeiro carro que você quer comprar" src/components/v3/modules/WishlistModule.tsx` MUST return 1 match (B2).
   </action>
   <verify>
     <automated>pnpm typecheck && pnpm lint</automated>
@@ -230,6 +244,8 @@ AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialo
     - `grep -n "AlertDialog" src/components/v3/modules/WishlistModule.tsx` returns ≥3 matches (import + open + content)
     - `grep -n "autoFocus" src/components/v3/modules/WishlistModule.tsx` returns ≥1 match (AlertDialogCancel autoFocus per UI-SPEC a11y)
     - `grep -n "Ainda sem wishlists" src/components/v3/modules/WishlistModule.tsx` returns 1 match
+    - `grep -n "Criar primeira wishlist" src/components/v3/modules/WishlistModule.tsx` returns 1 match (B1 empty-state CTA)
+    - `grep -n "Descreva o primeiro carro que você quer comprar" src/components/v3/modules/WishlistModule.tsx` returns 1 match (B2 empty-state body)
     - `grep -n "Minhas Wishlists" src/components/v3/modules/WishlistModule.tsx` returns 1 match
     - `grep -n "Não carregou suas wishlists" src/components/v3/modules/WishlistModule.tsx` returns 1 match
     - `grep -n "Apagar wishlist\\?" src/components/v3/modules/WishlistModule.tsx` returns 1 match
@@ -433,6 +449,7 @@ AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialo
 - D-14 honored: delete flow dispatches soft-delete (via hook from plan 07-02)
 - D-08 honored: summarize imported from helper (not duplicated)
 - Scaffold visual language preserved (EmptyState, WishlistCard, badges, card layout)
+- Empty state exposes UI-SPEC copy verbatim (heading + body + CTA) per B1/B2 fixes
 - 7 integration tests pass
 </success_criteria>
 
@@ -443,3 +460,5 @@ After completion, create `.planning/phases/07-wishlist-ui/07-11-SUMMARY.md` with
 - Confirmation grep-checks all return expected counts
 - Test count breakdown
 </output>
+</content>
+</invoke>
