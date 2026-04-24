@@ -35,12 +35,7 @@ describe("YearRangeField", () => {
   it("emits number on type", () => {
     const onMin = vi.fn();
     render(
-      <YearRangeField
-        valueMin={null}
-        valueMax={null}
-        onChangeMin={onMin}
-        onChangeMax={() => {}}
-      />,
+      <YearRangeField valueMin={null} valueMax={null} onChangeMin={onMin} onChangeMax={() => {}} />,
     );
     const inputs = screen.getAllByRole("spinbutton");
     fireEvent.change(inputs[0], { target: { value: "2018" } });
@@ -50,12 +45,7 @@ describe("YearRangeField", () => {
   it("emits null on clear", () => {
     const onMin = vi.fn();
     render(
-      <YearRangeField
-        valueMin={2018}
-        valueMax={null}
-        onChangeMin={onMin}
-        onChangeMax={() => {}}
-      />,
+      <YearRangeField valueMin={2018} valueMax={null} onChangeMin={onMin} onChangeMax={() => {}} />,
     );
     const inputs = screen.getAllByRole("spinbutton");
     fireEvent.change(inputs[0], { target: { value: "" } });
@@ -84,9 +74,7 @@ describe("YearRangeField", () => {
         errorText="Ano mínimo não pode ser maior que o máximo"
       />,
     );
-    expect(
-      screen.getByText("Ano mínimo não pode ser maior que o máximo"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Ano mínimo não pode ser maior que o máximo")).toBeInTheDocument();
     expect(screen.queryByText("Deixe vazio para qualquer ano")).toBeNull();
   });
 });
