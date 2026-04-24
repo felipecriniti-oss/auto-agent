@@ -19,6 +19,29 @@ if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {
   });
 }
 
+// jsdom does not implement ResizeObserver; cmdk (used by <Command>) observes
+// its list container on mount. Without this polyfill, any test that opens a
+// shadcn Command/Popover combobox (LocalidadePicker, FipeBrandCombobox,
+// FipeModelCombobox) throws "ResizeObserver is not defined".
+if (typeof globalThis.ResizeObserver === "undefined") {
+  class ResizeObserverPolyfill {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  globalThis.ResizeObserver = ResizeObserverPolyfill as unknown as typeof ResizeObserver;
+}
+
+// jsdom does not implement Element.scrollIntoView; cmdk calls it to keep the
+// selected CommandItem visible. Without this stub, combobox tests throw
+// "e.scrollIntoView is not a function".
+if (
+  typeof Element !== "undefined" &&
+  typeof (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView !== "function"
+) {
+  (Element.prototype as unknown as { scrollIntoView: () => void }).scrollIntoView = () => {};
+}
+
 if (typeof crypto === "undefined" || typeof crypto.randomUUID !== "function") {
   const fakeUuid = (): `${string}-${string}-${string}-${string}-${string}` => {
     const rand = (n: number) =>
