@@ -1,21 +1,31 @@
 import type { DbWishlist } from "@/types/database";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── mocks ──────────────────────────────────────────────────────────────────
 
 const mockOrder = vi.fn();
-const mockEq2 = vi.fn(() => ({ order: mockOrder }));
-const mockEq1 = vi.fn(() => ({ order: mockOrder, eq: mockEq2 }));
+const mockNeq = vi.fn(() => ({ order: mockOrder }));
+// Final eq in update/delete chain resolves to a PromiseLike { error: null }
+const mockEqTerminal = vi.fn(() => Promise.resolve({ error: null }));
+const mockEq1 = vi.fn(() => ({
+  // list query: .eq("user_id", x).neq("status", "archived").order(...)
+  neq: mockNeq,
+  order: mockOrder,
+  // update/delete path: .eq("id", x).eq("user_id", y) — final eq resolves
+  eq: mockEqTerminal,
+}));
 const mockSelect = vi.fn(() => ({ eq: mockEq1, order: mockOrder }));
 const mockInsert = vi.fn();
+const mockUpdate = vi.fn(() => ({ eq: mockEq1 }));
+const mockDelete = vi.fn(() => ({ eq: mockEq1 }));
 const mockFrom = vi.fn(() => ({
   select: mockSelect,
   insert: mockInsert,
-  update: vi.fn(),
-  delete: vi.fn(),
+  update: mockUpdate,
+  delete: mockDelete,
 }));
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -33,7 +43,7 @@ vi.mock("@/lib/supabase/env", () => ({
 }));
 
 // user hook pulls the user via our mocked getUser; need a minimal import here
-import { useWishlists } from "./useWishlists";
+import { useDeleteWishlist, useWishlists } from "./useWishlists";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -98,5 +108,37 @@ describe("useWishlists", () => {
     const { result } = renderHook(() => useWishlists(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeTruthy();
+  });
+
+  it("useWishlists applies .neq('status', 'archived') on list query (D-14 filter)", async () => {
+    mockOrder.mockResolvedValue({ data: [], error: null });
+    const { Wrapper } = makeWrapper();
+    renderHook(() => useWishlists(), { wrapper: Wrapper });
+    await waitFor(() => {
+      expect(mockNeq).toHaveBeenCalledWith("status", "archived");
+    });
+  });
+
+  it("useDeleteWishlist issues update({status:'archived'}) not delete() (D-14 soft-delete)", async () => {
+    // Seed list so the hook has a query to invalidate
+    mockOrder.mockResolvedValue({ data: [], error: null });
+    const { Wrapper } = makeWrapper();
+    // Render both hooks — useWishlists forces the session to resolve so
+    // useDeleteWishlist's closed-over `user` is populated before we mutate.
+    const { result } = renderHook(
+      () => {
+        useWishlists();
+        return useDeleteWishlist();
+      },
+      { wrapper: Wrapper },
+    );
+    // Wait for the session query to resolve (mockFrom gets called when
+    // useWishlists' queryFn runs, which only happens after user loads).
+    await waitFor(() => expect(mockFrom).toHaveBeenCalledWith("wishlists"));
+    await act(async () => {
+      await result.current.mutateAsync("w1");
+    });
+    expect(mockUpdate).toHaveBeenCalledWith({ status: "archived" });
+    expect(mockDelete).not.toHaveBeenCalled();
   });
 });
