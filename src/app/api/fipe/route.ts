@@ -93,6 +93,52 @@ function fuzzyMatch<T extends { nome: string }>(items: T[], needle: string): T |
   return hits.length > 0 ? hits[0] : null;
 }
 
+export async function GET(request: Request): Promise<Response> {
+  const ip = extractIp(request);
+  const rl = checkRateLimit(ip, { bucket: "fipe", max: 30, windowMs: 60_000 });
+  if (!rl.ok) {
+    return genericError(429, { error: "rate_limited", retryAfter: rl.retryAfter });
+  }
+
+  const url = new URL(request.url);
+  const type = url.searchParams.get("type");
+  const signal = AbortSignal.timeout(UPSTREAM_TIMEOUT_MS);
+
+  if (type === "brands") {
+    const marcas = await fetchJson(`${PARALLELUM_BASE}/marcas`, z.array(marcaSchema), signal);
+    if (isUpstreamFail(marcas)) {
+      return genericError(502, { error: "upstream_failed" });
+    }
+    return Response.json({ brands: marcas }, { status: 200 });
+  }
+
+  if (type === "models") {
+    const brand = url.searchParams.get("brand");
+    if (!brand) {
+      return genericError(400, { error: "missing_brand" });
+    }
+    const marcas = await fetchJson(`${PARALLELUM_BASE}/marcas`, z.array(marcaSchema), signal);
+    if (isUpstreamFail(marcas)) {
+      return genericError(502, { error: "upstream_failed" });
+    }
+    const marcaMatch = fuzzyMatch(marcas, brand);
+    if (!marcaMatch) {
+      return genericError(404, { error: "not_found" });
+    }
+    const modelosRes = await fetchJson(
+      `${PARALLELUM_BASE}/marcas/${encodeURIComponent(marcaMatch.codigo)}/modelos`,
+      modelosResponseSchema,
+      signal,
+    );
+    if (isUpstreamFail(modelosRes)) {
+      return genericError(502, { error: "upstream_failed" });
+    }
+    return Response.json({ models: modelosRes.modelos }, { status: 200 });
+  }
+
+  return genericError(400, { error: "invalid_type" });
+}
+
 export async function POST(request: Request): Promise<Response> {
   const ip = extractIp(request);
   const rl = checkRateLimit(ip, { bucket: "fipe", max: 20, windowMs: 60_000 });
