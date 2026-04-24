@@ -77,6 +77,7 @@ Referência: `.planning/PIVOT-3.md` para rationale completo da reorganização.
 **Goal:** Lojista cadastra wishlist descrevendo carro-alvo. Substitui URL-paste do Phase 5.
 **Depends on:** Phase 6 (hooks + DB)
 **Estimate:** 2-3 days
+**Plans:** 12 plans in 4 waves
 **Key deliverables:**
 - Módulo `WishlistModule` contra Supabase (hook existe após Phase 6)
 - Form `react-hook-form` + `zod` + shadcn/ui
@@ -84,6 +85,20 @@ Referência: `.planning/PIVOT-3.md` para rationale completo da reorganização.
 - Preview: "Esta semana acharíamos X anúncios compatíveis"
 
 **UI hint:** yes (drawer form + grid)
+
+**Plans:**
+- [ ] 07-01-PLAN.md — Wishlist schema + mock listings + FIPE brands snapshot foundation (wave 1)
+- [ ] 07-02-PLAN.md — useWishlists soft-delete migration + archived filter + test updates (wave 1)
+- [ ] 07-03-PLAN.md — /api/fipe GET branch — brands + models endpoints (wave 1)
+- [ ] 07-04-PLAN.md — scripts/sync-fipe-brands.ts — manual snapshot generator (wave 1)
+- [ ] 07-05-PLAN.md — useListingsSnapshot hook — Supabase select + silent mock fallback (wave 2)
+- [ ] 07-06-PLAN.md — Field primitives — BrlCurrencyInput + KmInput + YearRangeField (wave 2)
+- [ ] 07-07-PLAN.md — FIPE comboboxes — brand (snapshot) + model (React Query + fallback) (wave 3)
+- [ ] 07-08-PLAN.md — LocalidadeMultiPicker — array wrapper over existing LocalidadePicker (wave 3)
+- [ ] 07-09-PLAN.md — WishlistPreviewPane — debounced engine count + 3-card collapse (wave 3)
+- [ ] 07-10-PLAN.md — WishlistFormSheet — RHF composition of all primitives + submit flow (wave 3)
+- [ ] 07-11-PLAN.md — WishlistModule in-place rewrite — Supabase hooks + AlertDialog + summarize (wave 4)
+- [ ] 07-12-PLAN.md — Sidebar rename (D-15) + Onboarding step 3 integration + final phase gate (wave 4)
 
 ### Phase 8: Scraping pipeline WebMotors + hardening
 
