@@ -1,6 +1,6 @@
 import { resetRateLimitForTest } from "@/lib/server/rate-limit";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 const validBody = { marca: "Volkswagen", modelo: "Gol 1.6", ano: 2020 };
 
@@ -321,6 +321,140 @@ describe("POST /api/fipe — rate limit (INFRA-03 fipe bucket, T-04-03)", () => 
       await POST(makeRequest(validBody, "8.8.8.8"));
     }
     const res = await POST(makeRequest(validBody, "8.8.8.8"));
+    expect(res.status).toBe(429);
+    const data = await res.json();
+    expect(data.error).toBe("rate_limited");
+    expect(data.retryAfter).toBeGreaterThan(0);
+    expect(res.headers.get("Retry-After")).toBeTruthy();
+  });
+});
+
+function makeGetRequest(url: string, ip = "1.2.3.4"): Request {
+  return new Request(url, {
+    method: "GET",
+    headers: { "x-forwarded-for": ip },
+  });
+}
+
+describe("GET /api/fipe — brands", () => {
+  it("returns 200 with brands on Parallelum success", async () => {
+    const marcas = [
+      { codigo: "26", nome: "Honda" },
+      { codigo: "56", nome: "Toyota" },
+    ];
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(marcas));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await GET(makeGetRequest("http://localhost/api/fipe?type=brands"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.brands).toEqual(marcas);
+  });
+
+  it("returns 502 when Parallelum responds 500", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: "oops" }, { status: 500 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await GET(makeGetRequest("http://localhost/api/fipe?type=brands"));
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body.error).toBe("upstream_failed");
+  });
+
+  it("returns 400 invalid_type for unknown ?type=", async () => {
+    const res = await GET(makeGetRequest("http://localhost/api/fipe?type=chassis"));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("invalid_type");
+  });
+
+  it("returns 400 invalid_type when ?type is missing entirely", async () => {
+    const res = await GET(makeGetRequest("http://localhost/api/fipe"));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("invalid_type");
+  });
+});
+
+describe("GET /api/fipe — models", () => {
+  it("returns 200 with models after fuzzy-matching brand", async () => {
+    const marcas = [{ codigo: "26", nome: "Honda" }];
+    const modelos = {
+      modelos: [
+        { codigo: 1, nome: "Civic" },
+        { codigo: 2, nome: "Fit" },
+      ],
+      anos: [],
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(marcas))
+      .mockResolvedValueOnce(jsonResponse(modelos));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await GET(makeGetRequest("http://localhost/api/fipe?type=models&brand=Honda"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.models).toEqual(modelos.modelos);
+  });
+
+  it("returns 400 missing_brand when brand param absent", async () => {
+    const res = await GET(makeGetRequest("http://localhost/api/fipe?type=models"));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("missing_brand");
+  });
+
+  it("returns 404 not_found when brand fuzzy-match fails", async () => {
+    const marcas = [{ codigo: "26", nome: "Honda" }];
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(marcas));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await GET(makeGetRequest("http://localhost/api/fipe?type=models&brand=NopeCarCo"));
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe("not_found");
+  });
+
+  it("returns 502 when Parallelum marcas fetch fails", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: "oops" }, { status: 500 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await GET(makeGetRequest("http://localhost/api/fipe?type=models&brand=Honda"));
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body.error).toBe("upstream_failed");
+  });
+
+  it("returns 502 when Parallelum modelos fetch fails", async () => {
+    const marcas = [{ codigo: "26", nome: "Honda" }];
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(marcas))
+      .mockResolvedValueOnce(jsonResponse({ error: "oops" }, { status: 500 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await GET(makeGetRequest("http://localhost/api/fipe?type=models&brand=Honda"));
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body.error).toBe("upstream_failed");
+  });
+});
+
+describe("GET /api/fipe — rate limit (30/min fipe bucket)", () => {
+  it("blocks the 31st request with 429 + rate_limited error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(async () => jsonResponse([])),
+    );
+    for (let i = 0; i < 30; i++) {
+      await GET(makeGetRequest("http://localhost/api/fipe?type=brands", "7.7.7.7"));
+    }
+    const res = await GET(makeGetRequest("http://localhost/api/fipe?type=brands", "7.7.7.7"));
     expect(res.status).toBe(429);
     const data = await res.json();
     expect(data.error).toBe("rate_limited");
