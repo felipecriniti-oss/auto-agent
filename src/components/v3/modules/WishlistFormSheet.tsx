@@ -1,12 +1,14 @@
 "use client";
 
+import { BrlCurrencyInput } from "@/components/forms/BrlCurrencyInput";
+import { FipeBrandCombobox } from "@/components/forms/FipeBrandCombobox";
+import { FipeModelCombobox } from "@/components/forms/FipeModelCombobox";
+import { KmInput } from "@/components/forms/KmInput";
+import { LocalidadeMultiPicker } from "@/components/forms/LocalidadeMultiPicker";
+import { WishlistPreviewPane } from "@/components/forms/WishlistPreviewPane";
+import { YearRangeField } from "@/components/forms/YearRangeField";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -18,19 +20,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BrlCurrencyInput } from "@/components/forms/BrlCurrencyInput";
-import { FipeBrandCombobox } from "@/components/forms/FipeBrandCombobox";
-import { FipeModelCombobox } from "@/components/forms/FipeModelCombobox";
-import { KmInput } from "@/components/forms/KmInput";
-import { LocalidadeMultiPicker } from "@/components/forms/LocalidadeMultiPicker";
-import { WishlistPreviewPane } from "@/components/forms/WishlistPreviewPane";
-import { YearRangeField } from "@/components/forms/YearRangeField";
+import { type WishlistFormValues, wishlistSchema } from "@/lib/schemas/wishlist";
+import { useCreateWishlist, useUpdateWishlist } from "@/lib/supabase/hooks/useWishlists";
 import { cn } from "@/lib/utils";
-import { wishlistSchema, type WishlistFormValues } from "@/lib/schemas/wishlist";
-import {
-  useCreateWishlist,
-  useUpdateWishlist,
-} from "@/lib/supabase/hooks/useWishlists";
 import { summarize } from "@/lib/wishlist/summarize";
 import type { DbWishlist } from "@/types/database";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -151,14 +143,14 @@ export function WishlistFormSheet({
 
   // Brand change clears model (cascade)
   const brand = form.watch("brand");
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional — `brand` is the trigger (cascade reset), effect body only uses form.setValue.
   useEffect(() => {
     form.setValue("model", "");
   }, [brand, form]);
 
   async function onSubmit(values: WishlistFormValues): Promise<void> {
     // D-08: auto-name on submit if empty
-    const finalName =
-      values.name && values.name.length > 0 ? values.name : summarize(values);
+    const finalName = values.name && values.name.length > 0 ? values.name : summarize(values);
     const payload = { ...values, name: finalName };
 
     // L7: useCreateWishlist is NOT optimistic — mutateAsync resolves after the Supabase roundtrip.
@@ -178,9 +170,7 @@ export function WishlistFormSheet({
       if (layout === "sheet") onOpenChange?.(false);
       form.reset(DEFAULT_VALUES);
     } catch (_err) {
-      toast.error(
-        "Não foi possível salvar a wishlist. Verifique sua conexão e tente de novo.",
-      );
+      toast.error("Não foi possível salvar a wishlist. Verifique sua conexão e tente de novo.");
       // sheet stays open per UI-SPEC
     }
   }
@@ -192,8 +182,7 @@ export function WishlistFormSheet({
 
   if (layout === "sheet" && !open) return null;
 
-  const submitting =
-    form.formState.isSubmitting || createMut.isPending || updateMut.isPending;
+  const submitting = form.formState.isSubmitting || createMut.isPending || updateMut.isPending;
 
   // The body — reused across all three layout variants
   const body = (
@@ -294,12 +283,8 @@ export function WishlistFormSheet({
                     <YearRangeField
                       valueMin={form.watch("year_min")}
                       valueMax={form.watch("year_max")}
-                      onChangeMin={(v) =>
-                        form.setValue("year_min", v, { shouldValidate: true })
-                      }
-                      onChangeMax={(v) =>
-                        form.setValue("year_max", v, { shouldValidate: true })
-                      }
+                      onChangeMin={(v) => form.setValue("year_min", v, { shouldValidate: true })}
+                      onChangeMax={(v) => form.setValue("year_max", v, { shouldValidate: true })}
                       errorText={form.formState.errors.year_min?.message}
                     />
                   </FormControl>
@@ -352,9 +337,7 @@ export function WishlistFormSheet({
                       key={f}
                       selected={selected}
                       onClick={() => {
-                        const next = selected
-                          ? current.filter((x) => x !== f)
-                          : [...current, f];
+                        const next = selected ? current.filter((x) => x !== f) : [...current, f];
                         form.setValue("fuel_type", next, { shouldValidate: true });
                       }}
                     >
@@ -375,9 +358,7 @@ export function WishlistFormSheet({
                       key={t}
                       selected={selected}
                       onClick={() => {
-                        const next = selected
-                          ? current.filter((x) => x !== t)
-                          : [...current, t];
+                        const next = selected ? current.filter((x) => x !== t) : [...current, t];
                         form.setValue("transmission", next, { shouldValidate: true });
                       }}
                     >
@@ -410,9 +391,7 @@ export function WishlistFormSheet({
                     <ChoiceChip
                       key={o.label}
                       selected={selected}
-                      onClick={() =>
-                        form.setValue("armored", o.v, { shouldValidate: true })
-                      }
+                      onClick={() => form.setValue("armored", o.v, { shouldValidate: true })}
                     >
                       {o.label}
                     </ChoiceChip>
@@ -477,12 +456,7 @@ export function WishlistFormSheet({
             <h2 className="font-semibold text-lg text-slate-900 dark:text-slate-100">
               {isEdit ? "Editar wishlist" : "Nova wishlist"}
             </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancel}
-              aria-label="Fechar"
-            >
+            <Button variant="ghost" size="sm" onClick={handleCancel} aria-label="Fechar">
               <X className="size-4" />
             </Button>
           </header>

@@ -30,11 +30,7 @@ vi.mock("@/components/forms/FipeBrandCombobox", () => ({
     value: string;
     onChange: (v: string) => void;
   }) => (
-    <input
-      data-testid="mock-fipe-brand"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
+    <input data-testid="mock-fipe-brand" value={value} onChange={(e) => onChange(e.target.value)} />
   ),
 }));
 
@@ -101,10 +97,9 @@ describe("WishlistFormSheet", () => {
     mockCreateMutate.mockRejectedValueOnce(new Error("save fail"));
 
     const { Wrapper } = makeWrapper();
-    render(
-      <WishlistFormSheet layout="inline" onOpenChange={mockOnOpenChange} />,
-      { wrapper: Wrapper },
-    );
+    render(<WishlistFormSheet layout="inline" onOpenChange={mockOnOpenChange} />, {
+      wrapper: Wrapper,
+    });
 
     // Fill brand + model via mocked comboboxes (sibling primitives)
     const brandInput = screen.getByTestId("mock-fipe-brand");
@@ -138,9 +133,7 @@ describe("WishlistFormSheet", () => {
     render(<WishlistFormSheet layout="inline" submitLabel="Salvar e começar" />, {
       wrapper: Wrapper,
     });
-    expect(
-      screen.getByRole("button", { name: "Salvar e começar" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar e começar" })).toBeInTheDocument();
   });
 
   it("renders 'Cancelar' button in sheet layout but not in inline layout", () => {
@@ -148,9 +141,7 @@ describe("WishlistFormSheet", () => {
     const { rerender } = render(<WishlistFormSheet layout="sheet" open />, {
       wrapper: Wrapper,
     });
-    expect(
-      screen.getAllByRole("button", { name: "Cancelar" }).length,
-    ).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole("button", { name: "Cancelar" }).length).toBeGreaterThanOrEqual(1);
 
     rerender(<WishlistFormSheet layout="inline" />);
     expect(screen.queryByRole("button", { name: "Cancelar" })).toBeNull();
@@ -181,9 +172,7 @@ describe("WishlistFormSheet", () => {
     render(<WishlistFormSheet layout="inline" initial={initial} />, {
       wrapper: Wrapper,
     });
-    const nameInput = screen.getByPlaceholderText(
-      "Honda Civic 2018+ SP",
-    ) as HTMLInputElement;
+    const nameInput = screen.getByPlaceholderText("Honda Civic 2018+ SP") as HTMLInputElement;
     expect(nameInput.value).toBe("Meu Civic");
   });
 });

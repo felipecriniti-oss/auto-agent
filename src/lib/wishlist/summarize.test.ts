@@ -3,27 +3,27 @@ import { summarize } from "./summarize";
 
 describe("summarize (D-08 auto-name)", () => {
   it("full: brand + model + year_min + region_uf[0]", () => {
-    expect(
-      summarize({ brand: "Honda", model: "Civic", year_min: 2018, region_uf: ["SP"] }),
-    ).toBe("Honda Civic 2018+ SP");
+    expect(summarize({ brand: "Honda", model: "Civic", year_min: 2018, region_uf: ["SP"] })).toBe(
+      "Honda Civic 2018+ SP",
+    );
   });
 
   it("no UF: brand + model + year_min+", () => {
-    expect(
-      summarize({ brand: "Honda", model: "Civic", year_min: 2018, region_uf: [] }),
-    ).toBe("Honda Civic 2018+");
+    expect(summarize({ brand: "Honda", model: "Civic", year_min: 2018, region_uf: [] })).toBe(
+      "Honda Civic 2018+",
+    );
   });
 
   it("no year_min: brand + model + UF", () => {
-    expect(
-      summarize({ brand: "Honda", model: "Civic", year_min: null, region_uf: ["SP"] }),
-    ).toBe("Honda Civic SP");
+    expect(summarize({ brand: "Honda", model: "Civic", year_min: null, region_uf: ["SP"] })).toBe(
+      "Honda Civic SP",
+    );
   });
 
   it("no year, no UF: brand + model only", () => {
-    expect(
-      summarize({ brand: "Honda", model: "Civic", year_min: null, region_uf: [] }),
-    ).toBe("Honda Civic");
+    expect(summarize({ brand: "Honda", model: "Civic", year_min: null, region_uf: [] })).toBe(
+      "Honda Civic",
+    );
   });
 
   it("both brand and model empty → 'Wishlist sem nome' fallback", () => {
