@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
-import { vi, afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
+import { afterEach, vi } from "vitest";
 
 // jsdom does not implement window.matchMedia; sonner/next-themes calls it on mount.
 if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {

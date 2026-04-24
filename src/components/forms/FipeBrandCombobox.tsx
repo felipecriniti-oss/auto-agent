@@ -24,7 +24,10 @@ type Brand = { codigo: string; nome: string };
  * Copy of `LocalidadePicker.norm()` — rule-of-three extraction deferred.
  */
 function norm(s: string): string {
-  return s.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/\p{Diacritic}/gu, "");
+  return s
+    .toLocaleLowerCase("pt-BR")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
 }
 
 type Props = {
@@ -76,6 +79,7 @@ export function FipeBrandCombobox({
           id={id}
           type="button"
           variant="outline"
+          // biome-ignore lint/a11y/useSemanticElements: WAI-ARIA 1.2 combobox pattern — trigger MUST carry role="combobox" (not <select>, which breaks Popover+Command keyboard nav)
           role="combobox"
           aria-expanded={open}
           aria-haspopup="listbox"
@@ -102,10 +106,7 @@ export function FipeBrandCombobox({
                   }}
                 >
                   <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === b.nome ? "opacity-100" : "opacity-0",
-                    )}
+                    className={cn("mr-2 h-4 w-4", value === b.nome ? "opacity-100" : "opacity-0")}
                   />
                   {b.nome}
                 </CommandItem>

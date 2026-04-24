@@ -60,9 +60,7 @@ describe("FipeModelCombobox", () => {
   });
 
   it("falls back to free-text Input on 500 (D-05) with toast.info", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(jsonResponse({ error: "oops" }, { status: 500 }));
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: "oops" }, { status: 500 }));
     vi.stubGlobal("fetch", fetchMock);
 
     const { Wrapper } = makeWrapper();
