@@ -1,10 +1,10 @@
+import { PREVIEW_LISTINGS } from "@/lib/mock-data/preview-listings";
+import type { WishlistFormValues } from "@/lib/schemas/wishlist";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { type Control, FormProvider, useForm } from "react-hook-form";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PREVIEW_LISTINGS } from "@/lib/mock-data/preview-listings";
-import type { WishlistFormValues } from "@/lib/schemas/wishlist";
 
 // Mock useListingsSnapshot to return our curated mocks deterministically
 vi.mock("@/lib/supabase/hooks/useListingsSnapshot", () => ({
@@ -61,10 +61,9 @@ afterEach(() => {
 describe("WishlistPreviewPane", () => {
   it("renders Skeleton while brand/model are empty", () => {
     const { Wrapper } = makeWrapper();
-    render(
-      <FormHarness>{(control) => <WishlistPreviewPane control={control} />}</FormHarness>,
-      { wrapper: Wrapper },
-    );
+    render(<FormHarness>{(control) => <WishlistPreviewPane control={control} />}</FormHarness>, {
+      wrapper: Wrapper,
+    });
     // Debounce: advance past 400ms — still no brand/model → count=null → Skeleton
     act(() => {
       vi.advanceTimersByTime(450);
