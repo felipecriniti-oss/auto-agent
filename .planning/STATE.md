@@ -3,16 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 6 ~50% scaffolded — pivot 3 (2026-04-22 noite) pausou agente, promoveu billing/contratos, em execução autônoma overnight
-last_updated: "2026-04-22T23:00:00.000Z"
-last_activity: 2026-04-22 noite -- Pivot 3 reorg: 10/11 deferred, 13a (billing) + 13b (contracts) promoted, 12 reframed manual-contact, Supabase scale research completed
+stopped_at: Phase 7 context gathered — 7 decisions locked, ready for planning
+last_updated: "2026-04-24T01:12:45.447Z"
+last_activity: 2026-04-21 afternoon — autoplay + Apify enrichment + dark mode shipped
 progress:
-  total_phases: 11
-  completed_phases: 2
-  deferred_phases: 3
-  total_plans: 23
-  completed_plans: 15
-  percent: 18
+  total_phases: 10
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 43
 ---
 
 # Project State
@@ -24,6 +23,7 @@ See: .planning/PROJECT.md (updated 2026-04-21 — PIVOT NOTICE at top)
 **Current focus:** Phase 5 — v3 Product Shell (DEADLINE 2026-04-24 sexta, demo Felipe)
 
 **Active specs (canonical):**
+
 - `C:\Users\pc\Downloads\projeto autoagent atualizado\PRD_AutoAgent_v3.md`
 - `C:\Users\pc\Downloads\projeto autoagent atualizado\AutoAgent_UX_Prototype_v3.jsx`
 
@@ -32,6 +32,7 @@ See: .planning/PROJECT.md (updated 2026-04-21 — PIVOT NOTICE at top)
 ## Pivot Context (2026-04-21)
 
 User reviewed Phase 1 live deploy (`auto-agent-chi.vercel.app`) 2026-04-21 and flagged:
+
 1. **Directional error:** Phase 1 UX framed AutoAgent as PF-self-service. Correct model per PRD v3 is B2B lojista marketplace. PF is lead via WhatsApp, never user.
 2. **FIPE autofetch bug:** root caused to `Promise.all(120)` saturating Vercel Edge outbound pool. Fix committed `75b3177` (chunked parallel, 10 per wave, early-break). Deployed 2026-04-21.
 
@@ -51,12 +52,14 @@ Last activity: 2026-04-21 afternoon — autoplay + Apify enrichment + dark mode 
   slate-*/text-slate-*/border-slate-* remapped in `.dark` scope, so no
   per-component annotation needed for shell chrome). ThemeToggle in
   Sidebar cycles light/dark/system.
+
 - `ca90fe7` — ribtools actor output fully mapped. Location fix (UF
   extraction + whitespace trim), photoUrl from photos[0], listingUrl
   deep-link, sellerType PF/PJ badge, neighborhood enrichment, auto
   motivationSignals from publish_date + "Aceita troca" attribute,
   ddStatus derived from PF/PJ + is_armored, emoji picked from body_type.
   2 new scraper tests (12 passing total).
+
 - `04a60a8` — Backstage autoplay loop. Sibling AutoplayBackstage
   component drives negotiate→simulate-pf in a closed loop with its own
   message array (never touches Phase 1 chat store). Modo Piloto now
@@ -67,11 +70,14 @@ Last activity: 2026-04-21 afternoon — autoplay + Apify enrichment + dark mode 
 
 - Round 1 (`685b76d`): fake-auth gate — SignupView with persona picker
   mapping to plan tiers; AppShell gates /app behind `onboardingComplete`
+
 - Round 2A (`1c764c6`): /api/simulate-pf — second Claude playing the
   seller side with 3 personas (resistente/ansioso/urgente)
+
 - Round 2B (`186ddd6`): Modo Piloto launcher on Dashboard; drip-feeds
   5 pre-built opportunities into Marketplace over ~30s with toast
   progress and a pulsing banner on Marketplace
+
 - Round 3 (`631ab6e`): visual polish — Dashboard KPI hero + trend
   strip, Backstage editorial header, MyDeals Fraunces treatment
 
@@ -80,6 +86,7 @@ snapshot pre-autoplay) and `.planning/phases/05-v3-pivot/05-CONTEXT.md`
 (decisions log) for the full picture.
 
 Deferred phases:
+
 - Phase 2 (Inteligência do Agente) — 7 plans planned, 0 executed. Resume after v3 shell stable.
 - Phase 3 (PF Simulado e Batch) — superseded in spirit by /api/simulate-pf
   + AutoplayBackstage; formal batch runner still deferred.
@@ -127,6 +134,7 @@ Recent decisions affecting current work:
 - Review overnight work via `OVERNIGHT-PROGRESS.md` + live tests on `/app`
 - Add `APIFY_API_TOKEN` to `.env.local` + Vercel env vars (blocks only
   "Importar por URL" path; Modo Piloto theater doesn't need it)
+
 - Decide whether to invest half a day in Backstage autoplay UI loop
   before Friday, or ship the solo-chat Backstage as is
 
@@ -155,6 +163,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-20T16:56:45.511Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-intelig-ncia-do-agente/02-CONTEXT.md
+Last session: 2026-04-24T01:12:45.440Z
+Stopped at: Phase 7 context gathered — 7 decisions locked, ready for planning
+Resume file: .planning/phases/07-wishlist-ui/07-CONTEXT.md
