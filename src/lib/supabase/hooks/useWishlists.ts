@@ -31,6 +31,7 @@ async function fetchWishlists(userId: string): Promise<DbWishlist[]> {
     .from("wishlists")
     .select("*")
     .eq("user_id", userId)
+    .neq("status", "archived") // D-14: soft-delete filter
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data ?? [];
@@ -45,6 +46,8 @@ export function useWishlists() {
     queryFn: () => fetchWishlists(user?.id ?? ""),
     enabled,
     initialData: enabled ? undefined : [],
+    staleTime: 30_000, // D-09: 30s stale window, no realtime subscription
+    refetchOnWindowFocus: true, // D-09: multi-device freshness on focus
   });
 }
 
@@ -128,7 +131,7 @@ export function useDeleteWishlist() {
       const supabase = getSupabaseBrowser();
       const { error } = await supabase
         .from("wishlists")
-        .delete()
+        .update({ status: "archived" }) // D-14: soft delete
         .eq("id", id)
         .eq("user_id", user.id);
       if (error) throw error;
