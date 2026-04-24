@@ -1,10 +1,12 @@
 ---
 phase: 7
 slug: wishlist-ui
-status: draft
+status: approved
 shadcn_initialized: true
 preset: new-york (slate base, css-variables, lucide icons)
 created: 2026-04-22
+reviewed_at: 2026-04-23
+dimensions_passed: 6/6
 ---
 
 # Phase 7 — UI Design Contract — Wishlist UI
