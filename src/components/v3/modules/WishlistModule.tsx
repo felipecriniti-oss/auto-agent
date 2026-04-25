@@ -1,10 +1,26 @@
 "use client";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { type LocalWishlist, type WishlistInput, useAppStore } from "@/lib/stores/app";
-import type { FuelType, Transmission } from "@/types/database";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  useCreateWishlist,
+  useDeleteWishlist,
+  useUpdateWishlist,
+  useWishlists,
+} from "@/lib/supabase/hooks/useWishlists";
+import { summarize } from "@/lib/wishlist/summarize";
+import type { DbWishlist } from "@/types/database";
 import {
   Car,
   Gauge,
@@ -13,136 +29,58 @@ import {
   Play,
   Plus,
   Settings2,
-  Shield,
   Target,
   Trash2,
   Wallet,
-  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { WishlistFormSheet } from "./WishlistFormSheet";
 
-// ─── constants ──────────────────────────────────────────────────────────────
-
-const FUEL_OPTIONS: { value: FuelType; label: string }[] = [
-  { value: "flex", label: "Flex" },
-  { value: "gasolina", label: "Gasolina" },
-  { value: "diesel", label: "Diesel" },
-  { value: "híbrido", label: "Híbrido" },
-  { value: "elétrico", label: "Elétrico" },
-];
-
-const TRANSMISSION_OPTIONS: { value: Transmission; label: string }[] = [
-  { value: "automático", label: "Automático" },
-  { value: "CVT", label: "CVT" },
-  { value: "manual", label: "Manual" },
-];
-
-const UF_OPTIONS = ["SP", "RJ", "MG", "RS", "PR", "SC", "BA", "GO", "DF", "PE", "CE", "ES"];
-
-const CURRENT_YEAR = 2026;
-
-function makeEmptyInput(): WishlistInput {
-  return {
-    name: "",
-    brand: "",
-    model: "",
-    trim: null,
-    year_min: null,
-    year_max: null,
-    km_max: null,
-    price_max: null,
-    fuel_type: [],
-    transmission: [],
-    armored: null,
-    region_uf: [],
-    region_cities: [],
-  };
-}
-
-function wishlistToInput(w: LocalWishlist): WishlistInput {
-  return {
-    name: w.name,
-    brand: w.brand,
-    model: w.model,
-    trim: w.trim,
-    year_min: w.year_min,
-    year_max: w.year_max,
-    km_max: w.km_max,
-    price_max: w.price_max,
-    fuel_type: w.fuel_type,
-    transmission: w.transmission,
-    armored: w.armored,
-    region_uf: w.region_uf,
-    region_cities: w.region_cities,
-    status: w.status,
-  };
-}
+// ─── helpers ────────────────────────────────────────────────────────────────
 
 function formatBrl(v: number | null): string {
   if (v == null) return "—";
   return `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
-function summarize(w: LocalWishlist): string {
-  const parts: string[] = [];
-  const years =
-    w.year_min && w.year_max
-      ? `${w.year_min}-${w.year_max}`
-      : w.year_min
-        ? `${w.year_min}+`
-        : w.year_max
-          ? `até ${w.year_max}`
-          : "qualquer ano";
-  parts.push(years);
-  if (w.km_max != null) parts.push(`até ${w.km_max.toLocaleString("pt-BR")} km`);
-  if (w.price_max != null) parts.push(`até ${formatBrl(w.price_max)}`);
-  if (w.region_uf.length > 0) parts.push(w.region_uf.join("/"));
-  return parts.join(" · ");
-}
-
 // ─── main module ────────────────────────────────────────────────────────────
 
-export default function WishlistModule(): React.JSX.Element {
-  const wishlists = useAppStore((s) => s.wishlists);
-  const createWishlist = useAppStore((s) => s.createWishlist);
-  const updateWishlist = useAppStore((s) => s.updateWishlist);
-  const toggleWishlistStatus = useAppStore((s) => s.toggleWishlistStatus);
-  const deleteWishlist = useAppStore((s) => s.deleteWishlist);
+export function WishlistModule(): React.JSX.Element {
+  const { data: wishlists = [], isLoading, isError } = useWishlists();
+  const _createMut = useCreateWishlist(); // referenced for hook count + future inline create paths
+  const updateMut = useUpdateWishlist();
+  const deleteMut = useDeleteWishlist();
 
-  const [editing, setEditing] = useState<{ mode: "new" } | { mode: "edit"; id: string } | null>(
-    null,
-  );
+  const [formState, setFormState] = useState<
+    { mode: "create"; initial?: undefined } | { mode: "edit"; initial: DbWishlist } | null
+  >(null);
+  const [deleting, setDeleting] = useState<DbWishlist | null>(null);
 
   const sortedLists = useMemo(
     () =>
       [...wishlists].sort((a, b) => {
-        if (a.status !== b.status) {
-          if (a.status === "active") return -1;
-          if (b.status === "active") return 1;
-        }
+        // Paused cards to bottom (D-15 visual hierarchy from scaffold)
+        if (a.status === "paused" && b.status !== "paused") return 1;
+        if (a.status !== "paused" && b.status === "paused") return -1;
         return b.updated_at.localeCompare(a.updated_at);
       }),
     [wishlists],
   );
 
-  const editingWishlist =
-    editing && editing.mode === "edit"
-      ? (wishlists.find((w) => w.id === editing.id) ?? null)
-      : null;
-
-  const handleSave = (input: WishlistInput): void => {
-    if (!editing) return;
-    if (editing.mode === "new") {
-      const created = createWishlist(input);
-      toast.success(`Wishlist "${created.name}" criada`, {
-        description: summarize(created),
-      });
-    } else {
-      updateWishlist(editing.id, input);
-      toast.success("Wishlist atualizada");
-    }
-    setEditing(null);
+  const togglePause = (w: DbWishlist) => {
+    const nextStatus = w.status === "paused" ? "active" : "paused";
+    updateMut.mutate(
+      { id: w.id, patch: { status: nextStatus } },
+      {
+        onSuccess: () =>
+          toast.success(
+            nextStatus === "paused"
+              ? "Wishlist pausada. O sistema não criará novas oportunidades até retomar."
+              : "Wishlist ativa de novo.",
+          ),
+      },
+    );
   };
 
   return (
@@ -153,54 +91,118 @@ export default function WishlistModule(): React.JSX.Element {
             Minhas Wishlists
           </h1>
           <p className="mt-1 max-w-2xl text-slate-600 text-sm dark:text-slate-300">
-            Cadastre os carros que você quer. O agente monitora o WebMotors 24/7, negocia com o
-            vendedor e entrega as oportunidades prontas no seu marketplace.
+            Cadastre os carros que você quer comprar. O sistema monitora o WebMotors e entrega
+            oportunidades compatíveis.
           </p>
         </div>
         <Button
           size="lg"
-          onClick={() => setEditing({ mode: "new" })}
+          onClick={() => setFormState({ mode: "create" })}
           className="bg-[#4C46DC] text-white hover:bg-[#3f39c1]"
         >
-          <Plus className="mr-2 size-4" />
-          Nova Wishlist
+          <Plus className="mr-2 size-4" />+ Nova Wishlist
         </Button>
       </header>
 
-      {sortedLists.length === 0 ? (
-        <EmptyState onCreate={() => setEditing({ mode: "new" })} />
+      {isError ? (
+        <ErrorCard />
+      ) : isLoading ? (
+        <LoadingGrid />
+      ) : sortedLists.length === 0 ? (
+        <EmptyState onCreate={() => setFormState({ mode: "create" })} />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {sortedLists.map((wl) => (
             <WishlistCard
               key={wl.id}
               wishlist={wl}
-              onEdit={() => setEditing({ mode: "edit", id: wl.id })}
-              onToggle={() => toggleWishlistStatus(wl.id)}
-              onDelete={() => {
-                if (confirm(`Apagar wishlist "${wl.name}"?`)) {
-                  deleteWishlist(wl.id);
-                  toast.success("Wishlist removida");
-                }
-              }}
+              onEdit={() => setFormState({ mode: "edit", initial: wl })}
+              onToggle={() => togglePause(wl)}
+              onDelete={() => setDeleting(wl)}
             />
           ))}
         </div>
       )}
 
-      {editing !== null && (
-        <WishlistFormDrawer
-          initial={editingWishlist ? wishlistToInput(editingWishlist) : makeEmptyInput()}
-          title={editing.mode === "new" ? "Nova Wishlist" : "Editar Wishlist"}
-          onSave={handleSave}
-          onCancel={() => setEditing(null)}
+      {formState !== null && (
+        <WishlistFormSheet
+          initial={formState.mode === "edit" ? formState.initial : null}
+          open
+          onOpenChange={(o) => {
+            if (!o) setFormState(null);
+          }}
+          onSaved={() => setFormState(null)}
         />
       )}
+
+      <AlertDialog
+        open={deleting !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleting(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar wishlist?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A wishlist "{deleting?.name}" será removida. Oportunidades já abertas continuam no
+              marketplace, mas nenhuma nova será criada. Essa ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel autoFocus>Manter</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (!deleting) return;
+                deleteMut.mutate(deleting.id, {
+                  onSuccess: () => toast.success("Wishlist removida."),
+                });
+                setDeleting(null);
+              }}
+            >
+              Apagar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
-// ─── empty state ────────────────────────────────────────────────────────────
+// Default export retained for AppShell module registry compatibility.
+export default WishlistModule;
+
+// ─── states ─────────────────────────────────────────────────────────────────
+
+function LoadingGrid(): React.JSX.Element {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {[0, 1, 2].map((i) => (
+        <Card key={i} className="flex flex-col gap-4 p-5">
+          <Skeleton className="h-6 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function ErrorCard(): React.JSX.Element {
+  return (
+    <Card className="flex items-center gap-3 border-red-200 bg-red-50/50 p-6 text-red-900 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">
+      <p className="text-sm">
+        Não carregou suas wishlists. Recarregue a página ou tente em alguns minutos.
+      </p>
+    </Card>
+  );
+}
 
 function EmptyState({ onCreate }: { onCreate: () => void }): React.JSX.Element {
   return (
@@ -209,11 +211,11 @@ function EmptyState({ onCreate }: { onCreate: () => void }): React.JSX.Element {
         <Target className="size-7" />
       </div>
       <h2 className="font-semibold text-lg text-slate-900 dark:text-slate-100">
-        Sem wishlists ainda
+        Ainda sem wishlists
       </h2>
       <p className="mt-2 max-w-md text-slate-600 text-sm dark:text-slate-300">
-        Cadastre o primeiro carro que você quer. Quanto mais específico melhor — marca, modelo, ano,
-        km, faixa de preço, região. O agente cuida do resto.
+        Descreva o primeiro carro que você quer comprar. Marca, modelo, ano, km, preço, região —
+        quanto mais específico, melhor.
       </p>
       <Button
         size="lg"
@@ -230,7 +232,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }): React.JSX.Element {
 // ─── wishlist card ──────────────────────────────────────────────────────────
 
 interface WishlistCardProps {
-  wishlist: LocalWishlist;
+  wishlist: DbWishlist;
   onEdit: () => void;
   onToggle: () => void;
   onDelete: () => void;
@@ -254,7 +256,7 @@ function WishlistCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-semibold text-slate-900 dark:text-slate-100">
-            {wishlist.name || `${wishlist.brand} ${wishlist.model}`}
+            {wishlist.name || summarize(wishlist)}
           </h3>
           <p className="mt-1 truncate text-slate-600 text-sm dark:text-slate-300">
             {wishlist.brand} {wishlist.model} {wishlist.trim ?? ""}
@@ -311,13 +313,19 @@ function WishlistCard({
           Editar
         </Button>
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={onToggle}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggle}
+            aria-label={isActive ? "Pausar" : "Retomar"}
+          >
             {isActive ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={onDelete}
+            aria-label="Apagar"
             className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40"
           >
             <Trash2 className="size-3.5" />
@@ -363,359 +371,5 @@ function Chip({
     <span className={`rounded-md px-1.5 py-0.5 text-[11px] capitalize ring-1 ring-inset ${styles}`}>
       {children}
     </span>
-  );
-}
-
-// ─── form drawer ────────────────────────────────────────────────────────────
-
-interface WishlistFormDrawerProps {
-  initial: WishlistInput;
-  title: string;
-  onSave: (input: WishlistInput) => void;
-  onCancel: () => void;
-}
-
-function WishlistFormDrawer({
-  initial,
-  title,
-  onSave,
-  onCancel,
-}: WishlistFormDrawerProps): React.JSX.Element {
-  const [form, setForm] = useState<WishlistInput>(initial);
-  const [touched, setTouched] = useState(false);
-
-  const errors = useMemo(() => validate(form), [form]);
-  const isValid = Object.keys(errors).length === 0;
-
-  const handleSubmit = (): void => {
-    setTouched(true);
-    if (!isValid) return;
-    // Auto-derive name if empty
-    const final = { ...form };
-    if (!final.name.trim()) {
-      final.name = `${form.brand} ${form.model}${form.trim ? ` ${form.trim}` : ""}`.trim();
-    }
-    onSave(final);
-  };
-
-  const toggleArrayItem = <T extends string>(
-    arr: T[],
-    item: T,
-    setter: (next: T[]) => void,
-  ): void => {
-    if (arr.includes(item)) {
-      setter(arr.filter((x) => x !== item));
-    } else {
-      setter([...arr, item]);
-    }
-  };
-
-  return (
-    <>
-      <button
-        type="button"
-        aria-label="Fechar"
-        onClick={onCancel}
-        className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm"
-      />
-      <aside className="fixed inset-y-0 right-0 z-50 flex w-full flex-col overflow-hidden bg-white shadow-2xl dark:bg-slate-950 md:w-[560px]">
-        <header className="flex items-center justify-between border-slate-200 border-b px-6 py-4 dark:border-slate-800">
-          <h2 className="font-semibold text-lg text-slate-900 dark:text-slate-100">{title}</h2>
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            <X className="size-4" />
-          </Button>
-        </header>
-
-        <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
-          {/* Identification */}
-          <section className="space-y-4">
-            <Field
-              label="Nome da wishlist"
-              htmlFor="wl-name"
-              hint="(opcional — geramos automaticamente)"
-            >
-              <Input
-                id="wl-name"
-                placeholder="Ex: Honda Civic 2018+ SP"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
-            </Field>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <Field
-                label="Marca"
-                htmlFor="wl-brand"
-                required
-                error={touched ? errors.brand : null}
-              >
-                <Input
-                  id="wl-brand"
-                  placeholder="Honda"
-                  value={form.brand}
-                  onChange={(e) => setForm({ ...form, brand: e.target.value })}
-                />
-              </Field>
-              <Field
-                label="Modelo"
-                htmlFor="wl-model"
-                required
-                error={touched ? errors.model : null}
-              >
-                <Input
-                  id="wl-model"
-                  placeholder="Civic"
-                  value={form.model}
-                  onChange={(e) => setForm({ ...form, model: e.target.value })}
-                />
-              </Field>
-            </div>
-            <Field label="Versão (opcional)" htmlFor="wl-trim">
-              <Input
-                id="wl-trim"
-                placeholder="EXL, Touring..."
-                value={form.trim ?? ""}
-                onChange={(e) => setForm({ ...form, trim: e.target.value || null })}
-              />
-            </Field>
-          </section>
-
-          {/* Year + KM + Price */}
-          <section className="space-y-4">
-            <h3 className="font-medium text-slate-700 text-sm dark:text-slate-300">
-              Faixas aceitas
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Ano mínimo" htmlFor="wl-ymin">
-                <Input
-                  id="wl-ymin"
-                  type="number"
-                  min={1990}
-                  max={CURRENT_YEAR}
-                  placeholder="2018"
-                  value={form.year_min ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, year_min: e.target.value ? Number(e.target.value) : null })
-                  }
-                />
-              </Field>
-              <Field label="Ano máximo" htmlFor="wl-ymax">
-                <Input
-                  id="wl-ymax"
-                  type="number"
-                  min={1990}
-                  max={CURRENT_YEAR}
-                  placeholder={String(CURRENT_YEAR)}
-                  value={form.year_max ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, year_max: e.target.value ? Number(e.target.value) : null })
-                  }
-                />
-              </Field>
-            </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <Field label="KM máximo" htmlFor="wl-km">
-                <Input
-                  id="wl-km"
-                  type="number"
-                  min={0}
-                  placeholder="80000"
-                  value={form.km_max ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, km_max: e.target.value ? Number(e.target.value) : null })
-                  }
-                />
-              </Field>
-              <Field label="Preço máximo (R$)" htmlFor="wl-price">
-                <Input
-                  id="wl-price"
-                  type="number"
-                  min={0}
-                  placeholder="130000"
-                  value={form.price_max ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, price_max: e.target.value ? Number(e.target.value) : null })
-                  }
-                />
-              </Field>
-            </div>
-          </section>
-
-          {/* Fuel + Transmission */}
-          <section className="space-y-3">
-            <h3 className="font-medium text-slate-700 text-sm dark:text-slate-300">
-              Combustível + câmbio
-            </h3>
-            <div className="space-y-2">
-              <Label className="text-slate-600 text-xs dark:text-slate-400">Combustível</Label>
-              <div className="flex flex-wrap gap-2">
-                {FUEL_OPTIONS.map(({ value, label }) => (
-                  <ChoiceChip
-                    key={value}
-                    selected={form.fuel_type.includes(value)}
-                    onClick={() =>
-                      toggleArrayItem(form.fuel_type, value, (next) =>
-                        setForm({ ...form, fuel_type: next }),
-                      )
-                    }
-                  >
-                    {label}
-                  </ChoiceChip>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-slate-600 text-xs dark:text-slate-400">Câmbio</Label>
-              <div className="flex flex-wrap gap-2">
-                {TRANSMISSION_OPTIONS.map(({ value, label }) => (
-                  <ChoiceChip
-                    key={value}
-                    selected={form.transmission.includes(value)}
-                    onClick={() =>
-                      toggleArrayItem(form.transmission, value, (next) =>
-                        setForm({ ...form, transmission: next }),
-                      )
-                    }
-                  >
-                    {label}
-                  </ChoiceChip>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Armored */}
-          <section className="space-y-2">
-            <Label className="text-slate-600 text-xs dark:text-slate-400">
-              <Shield className="mr-1 inline size-3.5" />
-              Blindagem
-            </Label>
-            <div className="flex gap-2">
-              <ChoiceChip
-                selected={form.armored === null}
-                onClick={() => setForm({ ...form, armored: null })}
-              >
-                Qualquer
-              </ChoiceChip>
-              <ChoiceChip
-                selected={form.armored === true}
-                onClick={() => setForm({ ...form, armored: true })}
-              >
-                Só blindado
-              </ChoiceChip>
-              <ChoiceChip
-                selected={form.armored === false}
-                onClick={() => setForm({ ...form, armored: false })}
-              >
-                Não blindado
-              </ChoiceChip>
-            </div>
-          </section>
-
-          {/* Region */}
-          <section className="space-y-2">
-            <Label className="text-slate-600 text-xs dark:text-slate-400">
-              <MapPin className="mr-1 inline size-3.5" />
-              UFs aceitas (vazio = qualquer)
-            </Label>
-            <div className="flex flex-wrap gap-2">
-              {UF_OPTIONS.map((uf) => (
-                <ChoiceChip
-                  key={uf}
-                  selected={form.region_uf.includes(uf)}
-                  onClick={() =>
-                    toggleArrayItem(form.region_uf, uf, (next) =>
-                      setForm({ ...form, region_uf: next }),
-                    )
-                  }
-                >
-                  {uf}
-                </ChoiceChip>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        <footer className="flex items-center justify-between gap-3 border-slate-200 border-t bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/50">
-          <Button variant="ghost" onClick={onCancel}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={touched && !isValid}
-            className="bg-[#4C46DC] text-white hover:bg-[#3f39c1]"
-          >
-            Salvar wishlist
-          </Button>
-        </footer>
-      </aside>
-    </>
-  );
-}
-
-// ─── helpers ────────────────────────────────────────────────────────────────
-
-function validate(input: WishlistInput): Partial<Record<string, string>> {
-  const e: Partial<Record<string, string>> = {};
-  if (!input.brand.trim()) e.brand = "obrigatório";
-  if (!input.model.trim()) e.model = "obrigatório";
-  if (input.year_min != null && input.year_max != null && input.year_min > input.year_max) {
-    e.year_min = "mínimo > máximo";
-  }
-  return e;
-}
-
-function Field({
-  label,
-  htmlFor,
-  required,
-  hint,
-  error,
-  children,
-}: {
-  label: string;
-  htmlFor: string;
-  required?: boolean;
-  hint?: string;
-  error?: string | null;
-  children: React.ReactNode;
-}): React.JSX.Element {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={htmlFor} className="text-slate-700 text-sm dark:text-slate-200">
-        {label}
-        {required && <span className="text-red-500">*</span>}
-        {hint && (
-          <span className="ml-2 font-normal text-slate-500 text-xs dark:text-slate-400">
-            {hint}
-          </span>
-        )}
-      </Label>
-      {children}
-      {error && <p className="text-red-600 text-xs dark:text-red-400">{error}</p>}
-    </div>
-  );
-}
-
-function ChoiceChip({
-  selected,
-  onClick,
-  children,
-}: {
-  selected: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}): React.JSX.Element {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full px-3 py-1 font-medium text-xs ring-1 transition ${
-        selected
-          ? "bg-[#4C46DC] text-white ring-[#4C46DC]"
-          : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-slate-800"
-      }`}
-    >
-      {children}
-    </button>
   );
 }
