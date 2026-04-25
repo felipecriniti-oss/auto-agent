@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 type Model = { codigo: string; nome: string };
@@ -58,6 +58,9 @@ export function FipeModelCombobox({
 }: Props): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const [fallbackToText, setFallbackToText] = useState(false);
+  // MED-01: track per-brand toast emission so a re-mount or refetch on the same
+  // brand doesn't re-fire the "FIPE indisponível" info toast.
+  const toastedRef = useRef<string | null>(null);
 
   const enabled = !!brand && !fallbackToText;
 
@@ -88,16 +91,18 @@ export function FipeModelCombobox({
   });
 
   useEffect(() => {
-    if (isError) {
+    if (isError && toastedRef.current !== brand) {
       toast.info("FIPE indisponível — digite manualmente");
+      toastedRef.current = brand;
       setFallbackToText(true);
     }
-  }, [isError]);
+  }, [isError, brand]);
 
   // Reset fallback when brand changes — user may retry with a different brand
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional — watch brand only
   useEffect(() => {
     setFallbackToText(false);
+    toastedRef.current = null;
   }, [brand]);
 
   if (fallbackToText) {
