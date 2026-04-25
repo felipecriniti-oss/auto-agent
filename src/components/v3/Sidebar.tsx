@@ -8,7 +8,6 @@ import {
   BarChart3,
   Briefcase,
   Cpu,
-  Handshake,
   ListChecks,
   type LucideIcon,
   Menu,
@@ -40,15 +39,9 @@ const GROUPS: SidebarGroup[] = [
     items: [
       {
         key: "wishlists",
-        label: "Wishlists",
+        label: "Minhas Wishlists",
         icon: ListChecks,
         description: "Carros que você quer",
-      },
-      {
-        key: "marketplace",
-        label: "Marketplace",
-        icon: Handshake,
-        description: "Oportunidades pré-negociadas",
       },
       {
         key: "backstage",
