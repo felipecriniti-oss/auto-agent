@@ -124,7 +124,13 @@ export function WishlistPreviewPane({ control }: Props): React.JSX.Element {
                       className="overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950"
                     >
                       <div className="aspect-square w-full bg-slate-100 dark:bg-slate-800">
+                        {/* MED-04: TODO(Phase 8) — swap to next/image once listing photo URLs come from
+                            scraping (WebMotors/OLX/Mercado Livre). At that point, configure
+                            next.config.ts `images.remotePatterns` with the real CDN hosts so we
+                            get build-time domain whitelisting + Vercel image optimization.
+                            Curated mock URLs in Phase 7 make raw <img> acceptable for now. */}
                         {l.photo_url ? (
+                          // biome-ignore lint/performance/noImgElement: see MED-04 TODO above — Phase 7 mocks only.
                           <img src={l.photo_url} alt="" className="h-full w-full object-cover" />
                         ) : null}
                       </div>
