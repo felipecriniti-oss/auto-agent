@@ -20,6 +20,7 @@ import { LocalidadePicker } from "@/components/forms/LocalidadePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { WishlistFormSheet } from "@/components/v3/modules/WishlistFormSheet";
 import { cidadeExisteNoUf } from "@/lib/brasil/localidades";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { useSupabaseUser } from "@/lib/supabase/hooks/useSupabaseUser";
@@ -29,7 +30,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-type Step = 1 | 2;
+type Step = 1 | 2 | 3;
 
 function maskCnpj(raw: string): string {
   const digits = raw.replace(/\D/g, "").slice(0, 14);
@@ -52,6 +53,8 @@ export default function OnboardingPage() {
   const [uf, setUf] = useState<string>("");
   const [cnpj, setCnpj] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // B5: blocking overlay shown while step 3's onboarding_complete flip is in flight
+  const [finalizing, setFinalizing] = useState(false);
 
   // Belt-and-suspenders: middleware should send unauthed users to /login.
   useEffect(() => {
@@ -87,7 +90,11 @@ export default function OnboardingPage() {
           cnpj: cnpj.trim() || null,
           city: city.trim(),
           uf,
-          onboarding_complete: true,
+          // NOTE: onboarding_complete moved to step 3 handler (save or skip).
+          // Per B5/L8: the wizard now has 3 steps; flipping the flag here
+          // would cause users to bypass step 3 entirely. The flip happens in
+          // either the WishlistFormSheet onSaved callback or the "Pular e
+          // fazer depois" handler.
         })
         .eq("id", user.id);
 
@@ -96,12 +103,60 @@ export default function OnboardingPage() {
         return;
       }
 
-      toast.success("Pronto! Vamos ao painel.");
-      router.replace("/app");
+      // Advance to step 3 (first wishlist) — onboarding_complete flips there.
+      setStep(3);
     } catch (err) {
       toast.error("Erro inesperado", {
         description: err instanceof Error ? err.message : "Tente novamente.",
       });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // B5: step 3 save flow — fired by WishlistFormSheet.onSaved AFTER the form
+  // sheet has already shown its own success toast for the wishlist insert.
+  // Sequential, non-atomic per L8: if this call fails, user stays on step 3
+  // with an error toast and can use the "Pular e fazer depois" button as
+  // recovery.
+  const handleWishlistSaved = async () => {
+    if (!user) return;
+    setFinalizing(true);
+    try {
+      const supabase = getSupabaseBrowser();
+      const { error } = await supabase
+        .from("users")
+        .update({ onboarding_complete: true })
+        .eq("id", user.id);
+      if (error) {
+        toast.error(
+          "Wishlist salva, mas falhou ao finalizar onboarding. Toque em 'Pular e fazer depois' pra continuar.",
+        );
+        return;
+      }
+      toast.success("Onboarding concluído");
+      router.push("/app");
+    } finally {
+      setFinalizing(false);
+    }
+  };
+
+  // Skip flow — user opts not to create a first wishlist. Same target update
+  // as above (onboarding_complete=true), but no wishlist insert.
+  const handleSkip = async () => {
+    if (!user || submitting) return;
+    setSubmitting(true);
+    try {
+      const supabase = getSupabaseBrowser();
+      const { error } = await supabase
+        .from("users")
+        .update({ onboarding_complete: true })
+        .eq("id", user.id);
+      if (error) {
+        toast.error("Falha ao pular", { description: error.message });
+        return;
+      }
+      router.push("/app");
     } finally {
       setSubmitting(false);
     }
@@ -148,36 +203,40 @@ export default function OnboardingPage() {
             </span>
           </div>
           <div className="flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-            Passo {step} de 2
+            Passo {step} de 3
           </div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:p-10">
           <div className="mb-1 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-[#4C46DC]">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#4C46DC]" />
-            Conta · piloto SP
+            {step === 3 ? "Primeira wishlist · piloto SP" : "Conta · piloto SP"}
           </div>
           <h1
             className="text-3xl font-semibold leading-[1.05] tracking-tight text-slate-900 dark:text-slate-50 md:text-4xl"
             style={{ fontFamily: "var(--font-fraunces, Georgia, serif)" }}
           >
-            {step === 1 ? (
+            {step === 1 && (
               <>
                 Conta <em className="italic text-[#4C46DC]">quem você é</em>.
               </>
-            ) : (
+            )}
+            {step === 2 && (
               <>
                 Quase <em className="italic text-[#4C46DC]">lá</em>.
               </>
             )}
+            {step === 3 && "Cadastre seu primeiro carro-alvo"}
           </h1>
           <p className="mt-3 text-[15px] leading-relaxed text-slate-600 dark:text-slate-300">
-            {step === 1
-              ? "Três infos e você começa a ver oportunidades. Sem pagamento até o primeiro deal confirmado."
-              : "CNPJ é opcional por enquanto — pode cadastrar depois em Configurações."}
+            {step === 1 &&
+              "Três infos e você começa a ver oportunidades. Sem pagamento até o primeiro deal confirmado."}
+            {step === 2 && "CNPJ é opcional por enquanto — pode cadastrar depois em Configurações."}
+            {step === 3 &&
+              "Isso configura o sistema pra começar a buscar. Você pode cadastrar mais depois."}
           </p>
 
-          {step === 1 ? (
+          {step === 1 && (
             <form onSubmit={handleStep1} className="mt-8 space-y-5">
               <div>
                 <Label
@@ -236,7 +295,8 @@ export default function OnboardingPage() {
                 </Button>
               </div>
             </form>
-          ) : (
+          )}
+          {step === 2 && (
             <form onSubmit={handleStep2} className="mt-8 space-y-5">
               <div>
                 <Label
@@ -289,11 +349,52 @@ export default function OnboardingPage() {
                   disabled={submitting}
                   className="group h-11 bg-[#4C46DC] px-6 text-sm font-semibold text-white hover:bg-[#3d38b8] disabled:opacity-40"
                 >
-                  {submitting ? "Salvando..." : "Entrar no painel"}
+                  {submitting ? "Salvando..." : "Continuar"}
                   <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </Button>
               </div>
             </form>
+          )}
+          {step === 3 && (
+            <div className="mt-8 space-y-6">
+              {/*
+                B5 + L8: step 3 save flow is sequential and non-atomic.
+                1) WishlistFormSheet runs useCreateWishlist.mutateAsync; on
+                   success it fires its own toast.success("Wishlist ... criada")
+                   and then invokes onSaved(created).
+                2) handleWishlistSaved performs the SECOND step (the
+                   onboarding_complete flip), with its own loading overlay
+                   and a single additional success toast.
+                3) On failure of step 2, user stays on step 3 with a recovery
+                   message and "Pular e fazer depois" can retry the flip.
+              */}
+              <WishlistFormSheet
+                layout="inline"
+                submitLabel="Salvar e começar"
+                onSaved={handleWishlistSaved}
+              />
+              {finalizing && (
+                <div
+                  aria-live="polite"
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm"
+                >
+                  <div className="rounded-md bg-white px-6 py-4 shadow-lg dark:bg-slate-900">
+                    <p className="text-sm text-slate-700 dark:text-slate-200">
+                      Finalizando onboarding...
+                    </p>
+                  </div>
+                </div>
+              )}
+              <Button
+                variant="ghost"
+                type="button"
+                disabled={finalizing}
+                onClick={handleSkip}
+                className="w-full"
+              >
+                Pular e fazer depois
+              </Button>
+            </div>
           )}
         </div>
 
