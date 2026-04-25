@@ -33,7 +33,7 @@ Sequência de execução:
 | # | Phase | Status | Depende de |
 |---|---|---|---|
 | 6 | Supabase foundation | 🔜 **EM EXECUÇÃO** (scaffold 50% done) | — |
-| 7 | Wishlist UI (DB real) | seeded | 6 |
+| 7 | Wishlist UI (DB real) | ✅ **COMPLETE 2026-04-25** (12/12 plans, 381 tests, human UAT pending) | 6 |
 | 8 | Scraping pipeline + hardening | seeded | 6 |
 | 9 | Matching engine (DB integration) | seeded | 7, 8 |
 | 13a | Billing + plan gating + Stripe (exec wave 1 of PRD P13) | **DECOMPOSED** | 6 |
@@ -72,7 +72,7 @@ Referência: `.planning/PIVOT-3.md` para rationale completo da reorganização.
 
 **UI hint:** yes
 
-### Phase 7: Wishlist UI
+### Phase 7: Wishlist UI ✅ COMPLETE 2026-04-25
 
 **Goal:** Lojista cadastra wishlist descrevendo carro-alvo. Substitui URL-paste do Phase 5.
 **Depends on:** Phase 6 (hooks + DB)
@@ -87,18 +87,18 @@ Referência: `.planning/PIVOT-3.md` para rationale completo da reorganização.
 **UI hint:** yes (drawer form + grid)
 
 **Plans:**
-- [ ] 07-01-PLAN.md — Wishlist schema + mock listings + FIPE brands snapshot foundation (wave 1)
-- [ ] 07-02-PLAN.md — useWishlists soft-delete migration + archived filter + test updates (wave 1)
-- [ ] 07-03-PLAN.md — /api/fipe GET branch — brands + models endpoints (wave 1)
-- [ ] 07-04-PLAN.md — scripts/sync-fipe-brands.ts — manual snapshot generator (wave 1)
-- [ ] 07-05-PLAN.md — useListingsSnapshot hook — Supabase select + silent mock fallback (wave 2)
-- [ ] 07-06-PLAN.md — Field primitives — BrlCurrencyInput + KmInput + YearRangeField (wave 2)
-- [ ] 07-07-PLAN.md — FIPE comboboxes — brand (snapshot) + model (React Query + fallback) (wave 3)
-- [ ] 07-08-PLAN.md — LocalidadeMultiPicker — array wrapper over existing LocalidadePicker (wave 3)
-- [ ] 07-09-PLAN.md — WishlistPreviewPane — debounced engine count + 3-card collapse (wave 3)
-- [ ] 07-10-PLAN.md — WishlistFormSheet — RHF composition of all primitives + submit flow (wave 3)
-- [ ] 07-11-PLAN.md — WishlistModule in-place rewrite — Supabase hooks + AlertDialog + summarize (wave 4)
-- [ ] 07-12-PLAN.md — Sidebar rename (D-15) + Onboarding step 3 integration + final phase gate (wave 4)
+- [x] 07-01-PLAN.md — Wishlist schema + mock listings + FIPE brands snapshot foundation (wave 1)
+- [x] 07-02-PLAN.md — useWishlists soft-delete migration + archived filter + test updates (wave 1)
+- [x] 07-03-PLAN.md — /api/fipe GET branch — brands + models endpoints (wave 1)
+- [x] 07-04-PLAN.md — scripts/sync-fipe-brands.ts — manual snapshot generator (wave 1)
+- [x] 07-05-PLAN.md — useListingsSnapshot hook — Supabase select + silent mock fallback (wave 2)
+- [x] 07-06-PLAN.md — Field primitives — BrlCurrencyInput + KmInput + YearRangeField (wave 2)
+- [x] 07-07-PLAN.md — FIPE comboboxes — brand (snapshot) + model (React Query + fallback) (wave 3)
+- [x] 07-08-PLAN.md — LocalidadeMultiPicker — array wrapper over existing LocalidadePicker (wave 3)
+- [x] 07-09-PLAN.md — WishlistPreviewPane — debounced engine count + 3-card collapse (wave 3)
+- [x] 07-10-PLAN.md — WishlistFormSheet — RHF composition of all primitives + submit flow (wave 3)
+- [x] 07-11-PLAN.md — WishlistModule in-place rewrite — Supabase hooks + AlertDialog + summarize (wave 4)
+- [x] 07-12-PLAN.md — Sidebar rename (D-15) + Onboarding step 3 integration + final phase gate (wave 4)
 
 ### Phase 8: Scraping pipeline WebMotors + hardening
 
@@ -213,7 +213,7 @@ Phase 12 tem dep hard de Phase 9 (opportunities) + Phase 13a (fee checkout).
 | 2-4 | ⏸️ deferred | — |
 | 5. v3 Shell | ✅ shipped | — |
 | **6. Supabase foundation** | 🔜 **em execução** | Scaffold 50% — auth UI + hooks faltando |
-| 7. Wishlist UI | seeded | next após 6 |
+| 7. Wishlist UI | ✅ **complete** 2026-04-25 | 12/12 plans, 381 tests; HUMAN-UAT pending; 1 high finding (form sheet portal) |
 | 8. Scraping + hardening | seeded | parallel com 7 |
 | 9. Matching engine | seeded | after 7+8 |
 | 13a. Billing + access | seeded 🆕 | after 6 (parallel OK) |
