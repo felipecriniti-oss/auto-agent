@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { type WishlistFormValues, wishlistSchema } from "@/lib/schemas/wishlist";
 import { useCreateWishlist, useUpdateWishlist } from "@/lib/supabase/hooks/useWishlists";
 import { cn } from "@/lib/utils";
@@ -128,6 +129,11 @@ export function WishlistFormSheet({
   const isEdit = !!initial;
   const createMut = useCreateWishlist();
   const updateMut = useUpdateWishlist();
+  // HIGH-01 fix: gate desktop vs mobile branch at runtime. Wrapping the mobile
+  // <Dialog> in `<div className="md:hidden">` does NOT hide it on desktop because
+  // Radix DialogContent portals to `document.body` and escapes the wrapper. We
+  // must JSX-gate the whole subtree so exactly one branch is mounted per viewport.
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const form = useForm<WishlistFormValues>({
     // biome-ignore lint/suspicious/noExplicitAny: RHF resolver generics are famously incompatible with zod.refine-narrowed schemas; the runtime contract is correct.
@@ -439,11 +445,12 @@ export function WishlistFormSheet({
     return <div className="flex flex-col">{body}</div>;
   }
 
-  // Sheet layout: desktop aside + mobile Dialog
-  return (
-    <>
-      {/* Desktop — right-side aside (md+) */}
-      <div className="hidden md:block">
+  // Sheet layout: desktop aside OR mobile Dialog — never both. We JSX-gate the
+  // entire subtree because Radix DialogContent portals to document.body and
+  // escapes any CSS-only `md:hidden` wrapper (HIGH-01).
+  if (isDesktop) {
+    return (
+      <>
         {/* Backdrop */}
         <button
           type="button"
@@ -462,19 +469,19 @@ export function WishlistFormSheet({
           </header>
           {body}
         </aside>
-      </div>
+      </>
+    );
+  }
 
-      {/* Mobile — full-screen Dialog (< md) */}
-      <div className="md:hidden">
-        <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="flex h-full w-full flex-col p-0 sm:max-w-none">
-            <DialogHeader className="border-slate-200 border-b px-6 py-4 dark:border-slate-800">
-              <DialogTitle>{isEdit ? "Editar wishlist" : "Nova wishlist"}</DialogTitle>
-            </DialogHeader>
-            {body}
-          </DialogContent>
-        </Dialog>
-      </div>
-    </>
+  // Mobile — full-screen Dialog (< md)
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex h-full w-full flex-col p-0 sm:max-w-none">
+        <DialogHeader className="border-slate-200 border-b px-6 py-4 dark:border-slate-800">
+          <DialogTitle>{isEdit ? "Editar wishlist" : "Nova wishlist"}</DialogTitle>
+        </DialogHeader>
+        {body}
+      </DialogContent>
+    </Dialog>
   );
 }
