@@ -48,6 +48,7 @@ export function useWishlists() {
     initialData: enabled ? undefined : [],
     staleTime: 30_000, // D-09: 30s stale window, no realtime subscription
     refetchOnWindowFocus: true, // D-09: multi-device freshness on focus
+    refetchOnReconnect: true, // D-09: refresh when network comes back (MED-02)
   });
 }
 
