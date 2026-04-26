@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 7 complete — 12/12 plans, 381 tests, HUMAN-UAT pending; ready for Phase 8
-last_updated: "2026-04-25T09:55:00Z"
-last_activity: 2026-04-25 -- Phase 7 complete (verifier human_needed, code review 1 high)
+stopped_at: Phase 8 plan 06 complete (webhook discriminator + Apify ingest + cost cap + scrape_runs lifecycle); plans 07/08/09 remaining
+last_updated: "2026-04-26T14:46:55Z"
+last_activity: 2026-04-26 -- Phase 8 plan 06 complete (443 tests, all green; Apify ingest pipeline operational)
 progress:
   total_phases: 10
   completed_phases: 1
@@ -128,6 +128,8 @@ Recent decisions affecting current work:
 - Sem banco de dados na v0–v1; localStorage suficiente
 - Sem autenticação em nenhuma fase deste playground
 - Streaming via SSE (não WebSockets) — compatível com Vercel Edge
+- 08-06: Filter rejects (sinistro/leilao/recall) do not count toward 20% failure threshold — only technical_errors do (Rule 1 fix to plan formula to satisfy plan's own sinistro test expectation)
+- 08-06: AbortSignal-based timeout APIFY_FETCH_TIMEOUT_MS = 55_000 (under Vercel's 60s default Node-runtime timeout)
 
 ### Pending Todos (for user, 2026-04-22 AM)
 
@@ -163,6 +165,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-24T01:12:45.440Z
-Stopped at: Phase 7 context gathered — 7 decisions locked, ready for planning
-Resume file: .planning/phases/07-wishlist-ui/07-CONTEXT.md
+Last session: 2026-04-26T14:46:55Z
+Stopped at: Completed 08-06-PLAN.md — webhook discriminator + Apify ingest + cost cap + scrape_runs lifecycle
+Resume file: .planning/phases/08-scraping-pipeline/08-07-PLAN.md
