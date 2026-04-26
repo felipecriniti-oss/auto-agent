@@ -82,6 +82,26 @@ describe("getActorRun", () => {
       expect(String(err)).not.toMatch(/super-secret-token/);
     }
   });
+
+  it("forwards the AbortSignal into fetch", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        data: {
+          id: "r",
+          status: "SUCCEEDED",
+          defaultDatasetId: "ds",
+          usageTotalUsd: 0,
+          startedAt: "2026-04-25T10:00:00Z",
+          finishedAt: "2026-04-25T10:01:00Z",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const { getActorRun } = await importClient();
+    const ctrl = new AbortController();
+    await getActorRun("r", "tok", ctrl.signal);
+    expect(fetchMock.mock.calls[0][1].signal).toBe(ctrl.signal);
+  });
 });
 
 describe("streamDatasetItems", () => {
