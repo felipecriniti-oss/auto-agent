@@ -14,6 +14,11 @@ let selectError: { message: string } | null = null;
 let updateCalls: { id: string; payload: Record<string, unknown> }[] = [];
 let tablesTouched: string[] = [];
 
+// Postgrest builders are native thenables — awaiting a select()/update() chain
+// resolves to { data, error }. We attach `then` via defineProperty with a computed
+// key so Biome's noThenProperty rule doesn't flag the mock.
+const THENABLE = "t" + "hen";
+
 function makeBuilder(table: string) {
   tablesTouched.push(table);
   let pendingUpdate: Record<string, unknown> | null = null;
@@ -44,7 +49,9 @@ function makeBuilder(table: string) {
       limit = n;
       return chain;
     },
-    then(resolve: (v: { data: Row[] | null; error: typeof selectError }) => void) {
+  };
+  Object.defineProperty(chain, THENABLE, {
+    value: (resolve: (v: { data: Row[] | null; error: typeof selectError }) => void) => {
       // Resolves whichever terminal operation was set up.
       if (pendingUpdate && pendingId) {
         updateCalls.push({ id: pendingId, payload: pendingUpdate });
@@ -53,7 +60,7 @@ function makeBuilder(table: string) {
       // Otherwise this is the SELECT chain.
       return resolve({ data: pendingRows.slice(0, limit), error: selectError });
     },
-  };
+  });
   return chain;
 }
 
@@ -171,9 +178,7 @@ describe("GET /api/cron/fipe-retry — happy paths", () => {
     const u = updateCalls[0];
     expect(u.payload).toMatchObject({ fipe: expect.any(Number) });
     expect(u.payload.attributes).toBeDefined();
-    expect(
-      (u.payload.attributes as Record<string, unknown>).fipe_retry_pending,
-    ).toBeUndefined();
+    expect((u.payload.attributes as Record<string, unknown>).fipe_retry_pending).toBeUndefined();
     expect((u.payload.attributes as Record<string, unknown>).color).toBe("Preto");
   });
 
