@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 8 plan 06 complete (webhook discriminator + Apify ingest + cost cap + scrape_runs lifecycle); plans 07/08/09 remaining
-last_updated: "2026-04-26T14:46:55Z"
-last_activity: 2026-04-26 -- Phase 8 plan 06 complete (443 tests, all green; Apify ingest pipeline operational)
+stopped_at: Phase 8 plan 08 complete (fipe-retry hourly cron — D-04 backfill queue, 11 tests green); plans 07/09 remaining
+last_updated: "2026-04-26T15:00:57Z"
+last_activity: 2026-04-26 -- Phase 8 plan 08 complete (454 tests, all green; fipe-retry cron drains attributes.fipe_retry_pending=true queue chunked at 10/wave)
 progress:
   total_phases: 10
   completed_phases: 1
