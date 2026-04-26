@@ -15,7 +15,8 @@ describe("TARGET_MODELS", () => {
   });
 
   it("every url matches the WebMotors estoque pattern", () => {
-    const re = /^https:\/\/www\.webmotors\.com\.br\/carros\/estoque\?marca=[a-z0-9-]+&modelo=[a-z0-9-]+$/;
+    const re =
+      /^https:\/\/www\.webmotors\.com\.br\/carros\/estoque\?marca=[a-z0-9-]+&modelo=[a-z0-9-]+$/;
     for (const m of TARGET_MODELS) {
       expect(m.url).toMatch(re);
     }
