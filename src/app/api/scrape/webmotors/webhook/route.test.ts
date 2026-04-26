@@ -271,3 +271,48 @@ describe("POST /api/scrape/webmotors/webhook — happy path", () => {
     expect(oppUpsert).toBeDefined();
   });
 });
+
+// ─── NEW Phase 8 describes (added below existing Phase 7 tests) ─────────────
+
+describe("apify_run shape — auth", () => {
+  it("returns 401 when header is missing", async () => {
+    process.env.SCRAPE_WEBHOOK_SECRET = "deploy-secret";
+    const { POST } = await importRoute();
+    const req = new Request("http://localhost/api/scrape/webmotors/webhook", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ eventType: "ACTOR.RUN.SUCCEEDED", resource: { id: "run-1" } }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 401 when header value is wrong (timing-safe)", async () => {
+    process.env.SCRAPE_WEBHOOK_SECRET = "deploy-secret";
+    const { POST } = await importRoute();
+    const req = new Request("http://localhost/api/scrape/webmotors/webhook", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-scrape-webhook-secret": "wrong-secret",
+      },
+      body: JSON.stringify({ eventType: "ACTOR.RUN.SUCCEEDED", resource: { id: "run-1" } }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("apify_run shape — dataset ingest", () => {
+  it("ingests one item from a tiny dataset and creates one scrape_runs row", async () => {
+    // FULL TEST BODY in Task 2 once mocks are wired.
+    expect(true).toBe(true); // placeholder — replaced in Task 2
+  });
+});
+
+describe("apify_run shape — cost_cap (D-02 / SCRAPE-08)", () => {
+  it("returns 429 when SUM(scrape_runs.cost_usd) for today is >= 50 USD", async () => {
+    // FULL TEST BODY in Task 2 once mocks are wired.
+    expect(true).toBe(true); // placeholder — replaced in Task 2
+  });
+});

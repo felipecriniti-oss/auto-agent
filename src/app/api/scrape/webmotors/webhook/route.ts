@@ -1,35 +1,38 @@
 /**
  * POST /api/scrape/webmotors/webhook
  *
- * Stub ingest endpoint — bridges Phase 8's scraper output into the matching
- * engine + DB. The real Apify scheduled run hits this endpoint with a batch
- * of normalized listings.
+ * Two-shape ingest endpoint — bridges Phase 8's scraper output into the matching
+ * engine + DB. Body-shape discriminator routes:
  *
- * Flow:
- *   1. Auth: x-scrape-webhook-secret header must equal SCRAPE_WEBHOOK_SECRET.
- *      Returns 401 otherwise.
+ *   1. Apify event payload `{ eventType, resource: { id, ... } }`  → handleApifyRun
+ *   2. Pre-normalized listing array (Phase 7 stub contract)        → handleDirectListings
+ *
+ * Flow (handleDirectListings — UNCHANGED Phase 7 contract):
+ *   1. Auth: x-scrape-webhook-secret header (timing-safe compare).
  *   2. Body: array of listings matching WebhookListing (zod-validated).
  *   3. For each listing: upsert into `listings` by fingerprint.
- *   4. For each upserted listing, run matchListingToWishlists against every
- *      active wishlist (across ALL users — service role bypasses RLS).
+ *   4. For each upserted listing, run matchListingToWishlists.
  *   5. For each match with score >= 0.7, insert into `opportunities` with a
- *      computed fee_amount from plan tier + savings. Duplicate
- *      (user_id, wishlist_id, listing_id) inserts are NOOP via the unique
- *      constraint (onConflict: do nothing).
+ *      computed fee_amount from plan tier + savings.
  *   6. Return { listings_processed, opportunities_created, details }.
  *
- * Curl example (local):
- *   curl -X POST http://localhost:3000/api/scrape/webmotors/webhook \
- *     -H "Content-Type: application/json" \
- *     -H "x-scrape-webhook-secret: $SCRAPE_WEBHOOK_SECRET" \
- *     -d '[{"source":"webmotors","source_listing_id":"wm-test-1",
- *           "fingerprint":"fp-test-1","brand":"Honda","model":"Civic",
- *           "year":2020,"km":50000,"price":95000,"fipe":110000,
- *           "seller_type":"PF","seller_uf":"SP","seller_city":"São Paulo"}]'
+ * Flow (handleApifyRun — NEW Phase 8):
+ *   1. Auth (same shared-secret header).
+ *   2. Cost cap (D-02 / SCRAPE-08): SUM(scrape_runs.cost_usd) for today UTC;
+ *      429 if >= MAX_DAILY_SCRAPE_COST_USD (default 50).
+ *   3. scrape_runs lifecycle (SCRAPE-05): insert status='running' on entry;
+ *      update with counts + cost_usd + ended_at on exit.
+ *   4. Run meta (SCRAPE-02): getActorRun → defaultDatasetId + usageTotalUsd.
+ *   5. Stream dataset items one-at-a-time → normalize → upsert → match.
+ *   6. FIPE failure path (D-04): insert with fipe=null + attributes.fipe_retry_pending=true.
  *
- * Runtime: nodejs (service-role client needs Node APIs).
+ * Runtime: nodejs (service-role client + Apify timeouts).
  */
 
+import { getActorRun, streamDatasetItems } from "@/lib/apify/client";
+import type { WebMotorsScraped } from "@/lib/apify/types";
+import { verifySharedSecret } from "@/lib/apify/webhook-auth";
+import { normalizeWebMotorsItem } from "@/lib/apify/webmotors-normalize";
 import { matchListingToWishlists } from "@/lib/matching/engine";
 import { getSupabaseServiceRole } from "@/lib/supabase/server";
 import type { DbListing, DbWishlist, Plan } from "@/types/database";
@@ -67,6 +70,15 @@ const webhookListingSchema = z.object({
 
 const webhookBodySchema = z.array(webhookListingSchema).min(1).max(500);
 
+// ─── Phase 8 — Apify scheduled-run discriminator ────────────────────────────
+
+const apifyEventSchema = z.object({
+  resource: z.object({ id: z.string().min(1) }),
+  eventType: z.string().optional(),
+});
+
+const APIFY_FETCH_TIMEOUT_MS = 55_000;
+
 // ─── Fee calculation (mirrors PRD v3 success-fee model) ────────────────────
 
 function calcFee(plan: Plan, savingsVsFipe: number | null | undefined): number {
@@ -93,25 +105,40 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const header = request.headers.get("x-scrape-webhook-secret");
-  if (header !== secret) {
+  if (!verifySharedSecret(header, secret)) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  let body: z.infer<typeof webhookBodySchema>;
-  try {
-    const raw = await request.json();
-    const parsed = webhookBodySchema.safeParse(raw);
-    if (!parsed.success) {
-      return Response.json(
-        { error: "invalid_body", issues: parsed.error.issues.slice(0, 5) },
-        { status: 400 },
-      );
-    }
-    body = parsed.data;
-  } catch {
+  const raw: unknown = await request.json().catch(() => null);
+  if (raw === null) {
     return Response.json({ error: "invalid_body" }, { status: 400 });
   }
 
+  // Discriminator: Apify event payload (object with resource.id) vs Phase 7 stub (array).
+  const apifyParsed = apifyEventSchema.safeParse(raw);
+  if (apifyParsed.success) {
+    return await handleApifyRun(apifyParsed.data);
+  }
+
+  const stubParsed = webhookBodySchema.safeParse(raw);
+  if (stubParsed.success) {
+    return await handleDirectListings(stubParsed.data);
+  }
+
+  return Response.json(
+    {
+      error: "invalid_body",
+      issues: stubParsed.error.issues.slice(0, 5),
+    },
+    { status: 400 },
+  );
+}
+
+// ─── handleDirectListings — UNCHANGED Phase 7 contract ────────────────────
+
+async function handleDirectListings(
+  body: z.infer<typeof webhookBodySchema>,
+): Promise<Response> {
   const supabase = getSupabaseServiceRole();
 
   // Fetch all active wishlists + their owning user's plan in one pass.
@@ -223,4 +250,22 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   return Response.json(result, { status: 200 });
+}
+
+// ─── handleApifyRun — NEW Phase 8 (full impl in Task 2) ───────────────────
+
+async function handleApifyRun(
+  payload: z.infer<typeof apifyEventSchema>,
+): Promise<Response> {
+  // Implemented in Task 2 — Wave 1 imports referenced here so the module
+  // remains type-correct until the implementation lands.
+  void getActorRun;
+  void streamDatasetItems;
+  void normalizeWebMotorsItem;
+  void APIFY_FETCH_TIMEOUT_MS;
+  void ({} as WebMotorsScraped);
+  return Response.json(
+    { error: "not_implemented", run_id: payload.resource.id },
+    { status: 501 },
+  );
 }
