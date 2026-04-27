@@ -46,7 +46,9 @@ import { TARGET_MODELS } from "../src/lib/apify/target-models";
 // ─── Constants ─────────────────────────────────────────────────────────
 
 const APIFY_BASE = "https://api.apify.com/v2";
-const ACTOR = "ribtools~webmotors-scraper";
+// Human-readable slug used for actor lookup. Apify's /v2/schedules endpoint
+// requires the actor's internal ID (resolved at runtime), not the slug.
+const ACTOR_SLUG = "ribtools~webmotors-scraper";
 const TIMEZONE = "America/Sao_Paulo";
 
 const SCHEDULE_NAMES = {
@@ -190,8 +192,37 @@ async function updateSchedule(
   return json.data;
 }
 
-function buildScheduleBody(env: Env): Record<string, unknown> {
+async function resolveActorId(token: string, slug: string): Promise<string> {
+  const url = `${APIFY_BASE}/acts/${encodeURIComponent(slug)}?token=${encodeURIComponent(token)}`;
+  const res = await fetch(url, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    const rawBody = await res.text().catch(() => "");
+    throw new Error(`apify_actor_resolve_${res.status}: ${rawBody.slice(0, 400)}`);
+  }
+  const json = (await res.json()) as { data: { id: string } };
+  if (!json?.data?.id) throw new Error(`apify_actor_resolve_no_id_for_${slug}`);
+  return json.data.id;
+}
+
+function buildScheduleBody(env: Env, actorId: string): Record<string, unknown> {
   const startUrls = TARGET_MODELS.map((m) => ({ url: m.url }));
+  // Apify v2 /schedules API expects `runInput` as { body: <string>, contentType: <string> }
+  // — NOT the actor input object directly. The actor's actual input must be JSON-stringified
+  // into `body`. This was confirmed against the live API on 2026-04-26 after the previous
+  // shape (runInput as raw object) started returning schema-validation errors.
+  const actorInput = {
+    startUrls,
+    maxRequests: MAX_ITEMS_PER_RUN,
+    proxyConfig: {
+      useApifyProxy: true,
+      apifyProxyGroups: [],
+      apifyProxyCountry: "US",
+    },
+    sellerDataAddon: false,
+  };
   return {
     name: SCHEDULE_NAMES[env],
     cronExpression: CRON[env],
@@ -200,14 +231,10 @@ function buildScheduleBody(env: Env): Record<string, unknown> {
     actions: [
       {
         type: "RUN_ACTOR",
-        actorId: ACTOR,
+        actorId: actorId,
         runInput: {
-          startUrls,
-          maxItems: MAX_ITEMS_PER_RUN,
-          proxyConfiguration: {
-            useApifyProxy: true,
-            apifyProxyGroups: ["RESIDENTIAL"],
-          },
+          body: JSON.stringify(actorInput),
+          contentType: "application/json",
         },
       },
     ],
@@ -229,8 +256,11 @@ async function main(): Promise<void> {
   const scheduleName = SCHEDULE_NAMES[env];
   const cron = CRON[env];
 
+  // Resolve actor slug → internal ID (Apify /v2/schedules requires the ID, not the slug).
+  const actorId = await resolveActorId(token, ACTOR_SLUG);
+
   logOut(
-    `Syncing Apify schedule: name=${scheduleName} cron="${cron}" tz=${TIMEZONE} actor=${ACTOR}`,
+    `Syncing Apify schedule: name=${scheduleName} cron="${cron}" tz=${TIMEZONE} actor=${ACTOR_SLUG} (id=${actorId})`,
     token,
   );
   logOut(`startUrls: ${TARGET_MODELS.length} target models`, token);
@@ -240,7 +270,7 @@ async function main(): Promise<void> {
   const match = existing.find((s) => s.name === scheduleName);
 
   // 2. Build the request body.
-  const body = buildScheduleBody(env);
+  const body = buildScheduleBody(env, actorId);
 
   // 3. POST or PUT.
   let result: ApifySchedule;
