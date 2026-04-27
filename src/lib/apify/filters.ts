@@ -22,6 +22,15 @@ const SINISTRO_TERMS: RegExp[] = [
   /salvad[oa]/i,
   /recuperad[oa]/i,
   /batid[oa]/i,
+  // Phase 8.1: extra damage keywords surfaced from Spec Técnico v1 §2 review.
+  // Anchored to word characters with bounded char-classes — no nested quantifiers
+  // (T-08-04-04 ReDoS hardening still applies).
+  /colidi[uo]?/i, // colidiu, colidio
+  /capotad[oa]/i, // capotado, capotada
+  /motor\s+fundid[oa]/i, // motor fundido
+  /c[âa]mbio\s+fundid[oa]/i, // câmbio fundido / cambio fundido
+  /caixa\s+fundid[oa]/i, // caixa fundida (gearbox blown)
+  /chassis?\s+danific/i, // chassi danificado / chassis danificado
 ];
 
 export function detectBlockingFilter(item: WebMotorsScraped): FilterReason | null {

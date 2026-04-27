@@ -35,6 +35,39 @@ describe("detectBlockingFilter", () => {
     expect(detectBlockingFilter(item({ attributes: ["SINISTRO"] }))).toBe("sinistro");
   });
 
+  // Phase 8.1: extra damage keywords (Spec Técnico v1 §2 review).
+  it("returns 'sinistro' when title contains 'colidiu'", () => {
+    expect(detectBlockingFilter(item({ title: "Honda Civic 2020 colidiu na traseira" }))).toBe(
+      "sinistro",
+    );
+  });
+
+  it("returns 'sinistro' when title contains 'capotado'", () => {
+    expect(detectBlockingFilter(item({ title: "carro capotado, vendo barato" }))).toBe("sinistro");
+  });
+
+  it("returns 'sinistro' when attributes include 'motor fundido'", () => {
+    expect(detectBlockingFilter(item({ attributes: ["Motor fundido"] }))).toBe("sinistro");
+  });
+
+  it("returns 'sinistro' when attributes include 'câmbio fundido' (with diacritic)", () => {
+    expect(detectBlockingFilter(item({ attributes: ["câmbio fundido"] }))).toBe("sinistro");
+  });
+
+  it("returns 'sinistro' when attributes include 'cambio fundido' (no diacritic)", () => {
+    expect(detectBlockingFilter(item({ attributes: ["cambio fundido"] }))).toBe("sinistro");
+  });
+
+  it("returns 'sinistro' when title contains 'caixa fundida'", () => {
+    expect(detectBlockingFilter(item({ title: "Vendo Civic — caixa fundida, mecânico já viu" }))).toBe(
+      "sinistro",
+    );
+  });
+
+  it("returns 'sinistro' when attributes include 'chassi danificado'", () => {
+    expect(detectBlockingFilter(item({ attributes: ["chassi danificado"] }))).toBe("sinistro");
+  });
+
   it("returns null on a clean listing", () => {
     expect(detectBlockingFilter(item({ title: "Honda Civic EXL 2020 unico dono" }))).toBeNull();
   });
