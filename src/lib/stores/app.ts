@@ -74,6 +74,12 @@ interface AppState {
   pilotDiscoveredIds: number[]; // ids injected by the theatrical pilot sequence
   autoModeOpportunityIds: number[]; // opps that should auto-play a negotiation in Backstage
 
+  // marketplace unread badge (D-12 — incremented by realtime sub, reset on marketplace mount)
+  marketplaceUnreadCount: number;
+  incrementMarketplaceUnread: () => void;
+  resetMarketplaceUnread: () => void;
+  setMarketplaceUnread: (n: number) => void;
+
   // actions
   setActiveModule: (module: AppModule) => void;
   setCurrentPlan: (plan: PlanKey) => void;
@@ -101,6 +107,7 @@ function makeInitialState(): Pick<
   | "pilotStage"
   | "pilotDiscoveredIds"
   | "autoModeOpportunityIds"
+  | "marketplaceUnreadCount"
 > {
   return {
     activeModule: "wishlists",
@@ -112,6 +119,7 @@ function makeInitialState(): Pick<
     pilotStage: "idle",
     pilotDiscoveredIds: [],
     autoModeOpportunityIds: [],
+    marketplaceUnreadCount: 0,
   };
 }
 
@@ -173,6 +181,13 @@ export const useAppStore = create<AppState>()(
         }
       },
 
+      // Marketplace unread badge actions (D-12). Defensive `?? 0` guard (W-01)
+      // prevents NaN leaks if hydrated state predates the v4→v5 migration.
+      incrementMarketplaceUnread: () =>
+        set({ marketplaceUnreadCount: (get().marketplaceUnreadCount ?? 0) + 1 }),
+      resetMarketplaceUnread: () => set({ marketplaceUnreadCount: 0 }),
+      setMarketplaceUnread: (n) => set({ marketplaceUnreadCount: Math.max(0, n) }),
+
       createWishlist: (input) => {
         const now = new Date().toISOString();
         const wishlist: LocalWishlist = {
@@ -225,7 +240,7 @@ export const useAppStore = create<AppState>()(
     {
       name: "autoagent-app-v1",
       storage: createJSONStorage(() => localStorage),
-      version: 4,
+      version: 5,
       migrate: (persisted, version) => {
         if (version < 2) {
           const initial = makeInitialState();
@@ -259,6 +274,16 @@ export const useAppStore = create<AppState>()(
           } = persisted as Record<string, unknown>;
           return rest as unknown as AppState;
         }
+        if (version < 5) {
+          // v4 → v5: add marketplaceUnreadCount (default 0). Defensive — a
+          // v4-persisted state may not have this key at all. W-01 fix: never
+          // let `undefined` leak through where the UI expects a number.
+          const prev = persisted as Partial<AppState>;
+          return {
+            ...prev,
+            marketplaceUnreadCount: prev.marketplaceUnreadCount ?? 0,
+          } as AppState;
+        }
         return persisted as AppState;
       },
       partialize: (state) => ({
@@ -268,6 +293,7 @@ export const useAppStore = create<AppState>()(
         myDeals: state.myDeals,
         wishlists: state.wishlists,
         autoModeOpportunityIds: state.autoModeOpportunityIds,
+        marketplaceUnreadCount: state.marketplaceUnreadCount,
       }),
       onRehydrateStorage: () => (_state, error) => {
         if (error) {
