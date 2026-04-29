@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 9 plan 01 complete (engine PF-only hard rule, enforcePfOnly removed, 24 matching tests green); WishlistPreviewPane:67 typecheck error remains for Plan 09-02
-last_updated: "2026-04-29T23:20:38Z"
-last_activity: 2026-04-29 -- Phase 9 plan 01 complete (D-07 materialized: MatchingOptions.enforcePfOnly removed, listing.seller_type !== "PF" is now an unconditional short-circuit gate; 24/24 matching tests green)
+stopped_at: Phase 9 plan 02 complete (WishlistPreviewPane caller dropped enforcePfOnly arg, stale L2/L6 doc-comments cleaned, src/ now 0 references; 30 matching tests green; D-07 closed end-to-end)
+last_updated: "2026-04-29T20:25:00Z"
+last_activity: 2026-04-29 -- Phase 9 plan 02 complete (preview-pane caller fix; mocks confirmed 20/20 PF-stamped; typecheck + biome + tests all green)
 progress:
   total_phases: 10
   completed_phases: 1
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 13
+  completed_plans: 13
   percent: 10
 ---
 
@@ -131,6 +131,7 @@ Recent decisions affecting current work:
 - 08-06: Filter rejects (sinistro/leilao/recall) do not count toward 20% failure threshold — only technical_errors do (Rule 1 fix to plan formula to satisfy plan's own sinistro test expectation)
 - 08-06: AbortSignal-based timeout APIFY_FETCH_TIMEOUT_MS = 55_000 (under Vercel's 60s default Node-runtime timeout)
 - 09-01: D-07 materialized — `MatchingOptions.enforcePfOnly` removed entirely, `listing.seller_type !== "PF"` is now an unconditional listing-level short-circuit gate; null seller_type treated as non-PF (defensive); only known caller is `WishlistPreviewPane.tsx:67` (typecheck-failing until Plan 09-02 ships)
+- 09-02: D-07 closed end-to-end — WishlistPreviewPane caller dropped the `{ enforcePfOnly: false }` third arg; stale L2/L6 doc-comments referencing the removed flag cleaned; mocks at preview-listings.ts confirmed 20/20 PF-stamped (no edit needed); `grep -rn "enforcePfOnly" src/` now returns 0 lines
 
 ### Pending Todos (for user, 2026-04-22 AM)
 
@@ -166,6 +167,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-29T23:20:38Z
-Stopped at: Completed 09-01-PLAN.md — engine PF-only hard rule, enforcePfOnly flag removed, 24/24 matching tests green
-Resume file: .planning/phases/09-matching-engine/09-02-PLAN.md
+Last session: 2026-04-29T20:25:00Z
+Stopped at: Completed 09-02-PLAN.md — WishlistPreviewPane caller fix, stale L2/L6 doc-comments cleaned; D-07 fully closed across engine + caller
+Resume file: .planning/phases/09-matching-engine/09-03-PLAN.md

@@ -136,7 +136,7 @@ Referência: `.planning/PIVOT-3.md` para rationale completo da reorganização.
 
 **Plans:**
 - [x] 09-01-PLAN.md — Matching engine: drop enforcePfOnly, PF as hard rule + tests (wave 1) ✓ 2026-04-29
-- [ ] 09-02-PLAN.md — WishlistPreviewPane caller fix + mock dataset PF sanity check (wave 2)
+- [x] 09-02-PLAN.md — WishlistPreviewPane caller fix + mock dataset PF sanity check (wave 2) ✓ 2026-04-29
 - [ ] 09-03-PLAN.md — POST /api/match/backfill endpoint + tests (dedup, 30d window, PJ inheritance, fee tier) (wave 2)
 - [ ] 09-04-PLAN.md — useCreateWishlist onSuccess: backfill + selective toast + tests (wave 3)
 - [ ] 09-05-PLAN.md — useOpportunityRealtime hook + Zustand badge counter + Marketplace sidebar item + AppShell mount (wave 3)
