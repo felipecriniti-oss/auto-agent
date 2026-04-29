@@ -120,18 +120,26 @@ Referência: `.planning/PIVOT-3.md` para rationale completo da reorganização.
 
 ### Phase 9: Matching engine (DB integration)
 
-**Goal:** Pure function `src/lib/matching/engine.ts` (já existe, 23 testes passando) plug-in no DB trigger/Edge Function.
+**Goal:** Complete the matching loop end-to-end — engine PF-only as hard rule (drop `enforcePfOnly` flag), backfill on wishlist insert via `POST /api/match/backfill` (sync, 30d window), realtime opportunity toast + sidebar badge, all wired against existing engine + webhook handler.
 **Depends on:** Phase 7 + Phase 8
 **Estimate:** 2-3 days
+**Plans:** 5 plans in 3 waves
 **Key deliverables:**
-- Edge Function ou pg trigger on `listings` insert/update
-- Call matching engine contra wishlists ativas do user
-- Score ≥ 0.7 cria opportunity
-- Dedup por (wishlist_id, listing_id)
-- Realtime notification sub
-- Computa `fee_amount` = savings × fee_rate(plan) no insert da opportunity
+- Engine: `seller_type === 'PF'` becomes a hard rule (alongside model/year/km/price/region); `MatchingOptions.enforcePfOnly` removed
+- Caller: `WishlistPreviewPane` updated to use the flag-free engine API; mock listings already PF-stamped (verified 20/20)
+- Backfill endpoint: new `POST /api/match/backfill` mirrors webhook inner loop, iterates one wishlist × last-30d active listings, dedup via `(user_id, wishlist_id, listing_id)` unique constraint, fee computed via `calcFee(plan, savings)`
+- Hook integration: `useCreateWishlist` `onSuccess` POSTs to backfill + sonner toast "Encontramos N oportunidades" when n>0 (silent on n=0)
+- Realtime: dedicated `useOpportunityRealtime` hook mounted at AppShell, INSERT-only filter on `opportunities`, sonner toast with D-12 wording + "Ver" CTA, 5-events/2s burst debounce
+- Sidebar: new `Marketplace` nav item with Zustand-driven numeric badge that increments on realtime events and resets on marketplace mount
 
-**UI hint:** no (notif + dashboard atualiza)
+**UI hint:** yes (Marketplace nav badge + toasts; no new full views)
+
+**Plans:**
+- [ ] 09-01-PLAN.md — Matching engine: drop enforcePfOnly, PF as hard rule + tests (wave 1)
+- [ ] 09-02-PLAN.md — WishlistPreviewPane caller fix + mock dataset PF sanity check (wave 2)
+- [ ] 09-03-PLAN.md — POST /api/match/backfill endpoint + tests (dedup, 30d window, PJ inheritance, fee tier) (wave 2)
+- [ ] 09-04-PLAN.md — useCreateWishlist onSuccess: backfill + selective toast + tests (wave 3)
+- [ ] 09-05-PLAN.md — useOpportunityRealtime hook + Zustand badge counter + Marketplace sidebar item + AppShell mount (wave 3)
 
 ### Phase 13a: Billing + access control + Stripe 🆕 PROMOVIDO
 
