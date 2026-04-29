@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 9 plan 02 complete (WishlistPreviewPane caller dropped enforcePfOnly arg, stale L2/L6 doc-comments cleaned, src/ now 0 references; 30 matching tests green; D-07 closed end-to-end)
-last_updated: "2026-04-29T20:25:00Z"
-last_activity: 2026-04-29 -- Phase 9 plan 02 complete (preview-pane caller fix; mocks confirmed 20/20 PF-stamped; typecheck + biome + tests all green)
+stopped_at: Phase 9 plan 03 complete (POST /api/match/backfill endpoint shipped; MATCH_SCORE_THRESHOLD extracted to shared module — both webhook call sites + new backfill route consume it; counter semantics matched vs opportunities_created disambiguated per B-04; 9 backfill tests + 6 threshold tests + 1 webhook env-override test all green; 66/66 tests in matching+match+scrape suite)
+last_updated: "2026-04-29T20:30:00Z"
+last_activity: 2026-04-29 -- Phase 9 plan 03 complete (3 commits ac17e94/16769d6/d821118; B-02 + B-04 + N-02 fixes all materialized; D-08 single-source-of-truth holds across handleDirectListings + handleApifyRun + backfill)
 progress:
   total_phases: 10
   completed_phases: 1
@@ -132,6 +132,7 @@ Recent decisions affecting current work:
 - 08-06: AbortSignal-based timeout APIFY_FETCH_TIMEOUT_MS = 55_000 (under Vercel's 60s default Node-runtime timeout)
 - 09-01: D-07 materialized — `MatchingOptions.enforcePfOnly` removed entirely, `listing.seller_type !== "PF"` is now an unconditional listing-level short-circuit gate; null seller_type treated as non-PF (defensive); only known caller is `WishlistPreviewPane.tsx:67` (typecheck-failing until Plan 09-02 ships)
 - 09-02: D-07 closed end-to-end — WishlistPreviewPane caller dropped the `{ enforcePfOnly: false }` third arg; stale L2/L6 doc-comments referencing the removed flag cleaned; mocks at preview-listings.ts confirmed 20/20 PF-stamped (no edit needed); `grep -rn "enforcePfOnly" src/` now returns 0 lines
+- 09-03: D-08 materialized — `src/lib/matching/threshold.ts` exposes `getMatchScoreThreshold()` reading `MATCH_SCORE_THRESHOLD` env var (default 0.7, validated [0,1]); both webhook call sites (handleDirectListings line 212 + handleApifyRun line 400) and the new backfill route consume the same module; B-04 counter semantics — `matched` (engine-pass count, PRE-threshold) vs `opportunities_created` (above-threshold + non-dedup) — implemented in `/api/match/backfill` and tested with the 3-bucket fixture; deviation: second hardcoded threshold site in handleApifyRun (line 400) was discovered by sanity grep and fixed in same commit as the planned line-212 fix (Rule 3)
 
 ### Pending Todos (for user, 2026-04-22 AM)
 
@@ -167,6 +168,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-29T20:25:00Z
-Stopped at: Completed 09-02-PLAN.md — WishlistPreviewPane caller fix, stale L2/L6 doc-comments cleaned; D-07 fully closed across engine + caller
-Resume file: .planning/phases/09-matching-engine/09-03-PLAN.md
+Last session: 2026-04-29T20:30:00Z
+Stopped at: Completed 09-03-PLAN.md — POST /api/match/backfill endpoint live, MATCH_SCORE_THRESHOLD extracted to shared module, both webhook call sites updated; 9 backfill tests + 6 threshold tests + 1 webhook env-override test green; B-02 + B-04 + N-02 fixes all materialized
+Resume file: .planning/phases/09-matching-engine/09-04-PLAN.md

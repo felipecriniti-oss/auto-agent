@@ -223,7 +223,7 @@ Phase 12 tem dep hard de Phase 9 (opportunities) + Phase 13a (fee checkout).
 | **6. Supabase foundation** | 🔜 **em execução** | Scaffold 50% — auth UI + hooks faltando |
 | 7. Wishlist UI | ✅ **complete** 2026-04-25 | 12/12 plans, 381 tests; HUMAN-UAT pending; 1 high finding (form sheet portal) |
 | 8. Scraping + hardening | seeded | parallel com 7 |
-| 9. Matching engine | seeded | after 7+8 |
+| 9. Matching engine | 🔄 **in progress** (3/5 plans done) | 09-01 PF hard rule ✅, 09-02 preview-pane ✅, 09-03 backfill endpoint + threshold module ✅; 09-04 (useCreateWishlist onSuccess wire-up) + 09-05 (realtime toast) remaining |
 | 13a. Billing + access | seeded 🆕 | after 6 (parallel OK) |
 | 13b. Digital contracts | seeded 🆕 | after 13a |
 | 12. Opportunities dashboard | seeded (reframed) | after 9+13a |
