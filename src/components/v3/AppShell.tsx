@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { useAppStore } from "@/lib/stores/app";
 import type { AppModule } from "@/lib/stores/app";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { useOpportunityRealtime } from "@/lib/supabase/hooks/useOpportunityRealtime";
 import { useSupabaseUser } from "@/lib/supabase/hooks/useSupabaseUser";
 import { useRouter } from "next/navigation";
 import { type ComponentType, useEffect } from "react";
@@ -37,6 +38,11 @@ export default function AppShell() {
   const ActiveComponent = MODULES[activeModule];
   const { user, isLoading } = useSupabaseUser();
   const router = useRouter();
+
+  // 09-05: mount the realtime opportunity listener once at the shell so toasts
+  // + sidebar badge fire regardless of which dashboard module is active. The
+  // hook is a no-op until user is set + Supabase is configured.
+  useOpportunityRealtime();
 
   // Belt-and-suspenders: middleware already redirects unauthed users to /login
   // when Supabase is configured. This guards the client-rendered path for the

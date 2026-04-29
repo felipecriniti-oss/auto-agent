@@ -1,12 +1,22 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Sidebar reads activeModule + setActiveModule from the app store; mock with a
-// selector-shaped factory so tests don't need a real Zustand store.
+// Sidebar reads activeModule, setActiveModule, marketplaceUnreadCount, and
+// resetMarketplaceUnread from the app store. Selector-shaped factory keeps
+// the tests free of a real Zustand store.
+//
+// 09-05: D-15 removed Marketplace from the sidebar; 09-05 reintroduces it
+// (with a live unread badge) as a non-negotiable navigation entry between
+// Wishlists and Backstage.
+const storeState = {
+  activeModule: "wishlists" as string,
+  setActiveModule: vi.fn(),
+  marketplaceUnreadCount: 0,
+  resetMarketplaceUnread: vi.fn(),
+};
 vi.mock("@/lib/stores/app", () => ({
   // biome-ignore lint/suspicious/noExplicitAny: selector-shaped mock for Zustand
-  useAppStore: (selector: (state: any) => unknown) =>
-    selector({ activeModule: "wishlists", setActiveModule: () => {} }),
+  useAppStore: (selector: (state: any) => unknown) => selector(storeState),
 }));
 
 // useProfile is fetched on render; provide a minimal stub.
@@ -21,17 +31,54 @@ vi.mock("@/components/v3/ThemeToggle", () => ({
 
 import Sidebar from "./Sidebar";
 
-describe("Sidebar (D-15)", () => {
-  it("renders label 'Minhas Wishlists' (D-15 rename)", () => {
+beforeEach(() => {
+  storeState.activeModule = "wishlists";
+  storeState.marketplaceUnreadCount = 0;
+  storeState.setActiveModule.mockReset();
+  storeState.resetMarketplaceUnread.mockReset();
+});
+
+describe("Sidebar (09-05)", () => {
+  it("renders label 'Minhas Wishlists'", () => {
     render(<Sidebar />);
-    // The mobile nav and desktop nav both render — the sidebar mounts items in
-    // a single nav, so this should match exactly once.
     const matches = screen.getAllByText("Minhas Wishlists");
     expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("does not render 'Marketplace' nav item (D-15 removal)", () => {
+  it("renders 'Marketplace' nav item (09-05 reintroduction)", () => {
     render(<Sidebar />);
-    expect(screen.queryByText("Marketplace")).toBeNull();
+    expect(screen.getByText("Marketplace")).toBeInTheDocument();
+  });
+
+  it("places Marketplace between Wishlists and Backstage in Operação", () => {
+    render(<Sidebar />);
+    const labels = screen.getAllByRole("button").map((b) => b.textContent ?? "");
+    const wishIdx = labels.findIndex((l) => l.includes("Minhas Wishlists"));
+    const mpIdx = labels.findIndex((l) => l.includes("Marketplace"));
+    const bsIdx = labels.findIndex((l) => l.includes("Backstage"));
+    expect(wishIdx).toBeGreaterThanOrEqual(0);
+    expect(mpIdx).toBeGreaterThan(wishIdx);
+    expect(bsIdx).toBeGreaterThan(mpIdx);
+  });
+
+  it("does not render the unread badge when count is 0", () => {
+    storeState.marketplaceUnreadCount = 0;
+    render(<Sidebar />);
+    expect(screen.queryByLabelText(/novas oportunidades/)).toBeNull();
+  });
+
+  it("renders the unread badge with the count when > 0", () => {
+    storeState.marketplaceUnreadCount = 7;
+    render(<Sidebar />);
+    const badge = screen.getByLabelText(/7 novas oportunidades/);
+    expect(badge).toBeInTheDocument();
+    expect(badge.textContent).toBe("7");
+  });
+
+  it("clamps the badge label at 99+ when count exceeds 99", () => {
+    storeState.marketplaceUnreadCount = 142;
+    render(<Sidebar />);
+    const badge = screen.getByLabelText(/142 novas oportunidades/);
+    expect(badge.textContent).toBe("99+");
   });
 });

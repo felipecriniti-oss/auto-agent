@@ -15,6 +15,7 @@ import {
   Rocket,
   Settings as SettingsIcon,
   ShieldCheck,
+  ShoppingBag,
   Target,
   X,
 } from "lucide-react";
@@ -42,6 +43,12 @@ const GROUPS: SidebarGroup[] = [
         label: "Minhas Wishlists",
         icon: ListChecks,
         description: "Carros que você quer",
+      },
+      {
+        key: "marketplace",
+        label: "Marketplace",
+        icon: ShoppingBag,
+        description: "Oportunidades ativas",
       },
       {
         key: "backstage",
@@ -100,6 +107,8 @@ function deriveInitials(name: string | null): string {
 export default function Sidebar(): React.JSX.Element {
   const activeModule = useAppStore((s) => s.activeModule);
   const setActiveModule = useAppStore((s) => s.setActiveModule);
+  const marketplaceUnread = useAppStore((s) => s.marketplaceUnreadCount);
+  const resetMarketplaceUnread = useAppStore((s) => s.resetMarketplaceUnread);
   const { data: profile } = useProfile();
   const currentPlan = profile?.plan ?? "starter";
   const plan = plansConfig[currentPlan];
@@ -113,6 +122,11 @@ export default function Sidebar(): React.JSX.Element {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleNav = (key: AppModule): void => {
+    // 09-05: navigating to Marketplace clears the unread badge — the user is
+    // about to see all the new opportunities in the grid.
+    if (key === "marketplace") {
+      resetMarketplaceUnread();
+    }
     setActiveModule(key);
     setMobileOpen(false);
   };
@@ -236,7 +250,17 @@ export default function Sidebar(): React.JSX.Element {
                         }
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block font-medium leading-tight">{item.label}</span>
+                        <span className="flex items-center gap-2">
+                          <span className="block font-medium leading-tight">{item.label}</span>
+                          {item.key === "marketplace" && marketplaceUnread > 0 && (
+                            <span
+                              aria-label={`${marketplaceUnread} novas oportunidades`}
+                              className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#4C46DC] px-1.5 text-[10px] font-bold text-white"
+                            >
+                              {marketplaceUnread > 99 ? "99+" : marketplaceUnread}
+                            </span>
+                          )}
+                        </span>
                         {item.description && (
                           <span
                             className={`mt-0.5 block text-[11px] leading-tight ${
