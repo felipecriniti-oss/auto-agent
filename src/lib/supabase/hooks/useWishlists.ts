@@ -18,6 +18,7 @@ import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { DbWishlist, Tables } from "@/types/database";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useSupabaseUser } from "./useSupabaseUser";
 
 const WISHLISTS_KEY = ["supabase", "wishlists"] as const;
@@ -68,8 +69,37 @@ export function useCreateWishlist() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data: DbWishlist) => {
       queryClient.invalidateQueries({ queryKey: [...WISHLISTS_KEY, user?.id ?? "anon"] });
+
+      // D-05: sync backfill against the last 30d of listings.
+      try {
+        const res = await fetch("/api/match/backfill", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ wishlist_id: data.id }),
+        });
+        if (!res.ok) {
+          console.error("backfill_failed", { status: res.status, wishlist_id: data.id });
+          return;
+        }
+        const { opportunities_created } = (await res.json()) as {
+          matched: number;
+          opportunities_created: number;
+        };
+        // D-06: only toast when something happened.
+        if (opportunities_created > 0) {
+          toast.success(
+            `Encontramos ${opportunities_created} oportunidade${opportunities_created === 1 ? "" : "s"} para essa wishlist`,
+            { duration: 5000 },
+          );
+          queryClient.invalidateQueries({
+            queryKey: ["supabase", "opportunities", user?.id ?? "anon"],
+          });
+        }
+      } catch (err) {
+        console.error("backfill_failed", err);
+      }
     },
   });
 }
