@@ -1,5 +1,10 @@
 "use client";
 
+// Opt out of static prerender — `useSearchParams()` reads from the request URL
+// and Next.js 15 requires the surrounding page to be either dynamic OR wrapped
+// in <Suspense> at build time. Auth pages are not cached anyway.
+export const dynamic = "force-dynamic";
+
 /**
  * /login — email + password auth.
  *
