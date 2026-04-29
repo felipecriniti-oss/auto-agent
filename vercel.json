@@ -5,6 +5,6 @@
   },
   "crons": [
     { "path": "/api/cron/listings-cleanup", "schedule": "0 4 * * *" },
-    { "path": "/api/cron/fipe-retry", "schedule": "5 * * * *" }
+    { "path": "/api/cron/fipe-retry", "schedule": "0 5 * * *" }
   ]
 }
