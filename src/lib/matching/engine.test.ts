@@ -140,15 +140,18 @@ describe("matchListingToWishlists — hard fails", () => {
     expect(r).toHaveLength(0);
   });
 
-  it("rejects PJ listings by default", () => {
+  it("rejects PJ listings unconditionally", () => {
     const r = matchListingToWishlists(makeListing({ seller_type: "PJ" }), [makeWishlist()]);
     expect(r).toHaveLength(0);
   });
 
-  it("allows PJ if enforcePfOnly=false", () => {
-    const r = matchListingToWishlists(makeListing({ seller_type: "PJ" }), [makeWishlist()], {
-      enforcePfOnly: false,
-    });
+  it("rejects listings with null seller_type (treated as non-PF)", () => {
+    const r = matchListingToWishlists(makeListing({ seller_type: null }), [makeWishlist()]);
+    expect(r).toHaveLength(0);
+  });
+
+  it("accepts PF listings without any options argument", () => {
+    const r = matchListingToWishlists(makeListing({ seller_type: "PF" }), [makeWishlist()]);
     expect(r).toHaveLength(1);
   });
 
