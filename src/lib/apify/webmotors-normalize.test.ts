@@ -75,7 +75,9 @@ describe("normalizeWebMotorsItem — happy paths", () => {
   });
 
   it("falls back to model_year when fabrication_year is missing", () => {
-    const result = normalizeWebMotorsItem(happyPf({ fabrication_year: undefined, model_year: 2018 }));
+    const result = normalizeWebMotorsItem(
+      happyPf({ fabrication_year: undefined, model_year: 2018 }),
+    );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.row.year).toBe(2018);
@@ -118,7 +120,9 @@ describe("normalizeWebMotorsItem — happy paths", () => {
     const result = normalizeWebMotorsItem(happyPf({ publish_date: old }));
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.row.motivation_signals).toMatchObject({ days_online_threshold: expect.any(Number) });
+    expect(result.row.motivation_signals).toMatchObject({
+      days_online_threshold: expect.any(Number),
+    });
   });
 
   it("does NOT map seller phones into the row (PII redaction — T-08-04-02)", () => {

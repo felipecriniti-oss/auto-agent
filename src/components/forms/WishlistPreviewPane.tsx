@@ -130,7 +130,8 @@ export function WishlistPreviewPane({ control }: Props): React.JSX.Element {
                             get build-time domain whitelisting + Vercel image optimization.
                             Curated mock URLs in Phase 7 make raw <img> acceptable for now. */}
                         {l.photo_url ? (
-                          // biome-ignore lint/performance/noImgElement: see MED-04 TODO above — Phase 7 mocks only.
+                          // Phase 7 mocks only — see MED-04 TODO above. Will swap to next/image
+                          // in Phase 8 once listing photo URLs come from real CDN hosts.
                           <img src={l.photo_url} alt="" className="h-full w-full object-cover" />
                         ) : null}
                       </div>

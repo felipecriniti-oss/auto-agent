@@ -18,7 +18,7 @@
  */
 import { createHash } from "node:crypto";
 import type { Tables } from "@/types/database";
-import { detectBlockingFilter, type FilterReason } from "./filters";
+import { type FilterReason, detectBlockingFilter } from "./filters";
 import type { WebMotorsScraped } from "./types";
 
 export type NormalizeResult =
@@ -55,9 +55,7 @@ function buildMotivationSignals(item: WebMotorsScraped): Record<string, unknown>
   if (days !== null && days >= 14) signals.days_online_threshold = days;
   if (
     Array.isArray(item.attributes) &&
-    item.attributes.some(
-      (a): a is string => typeof a === "string" && /aceita\s*troca/i.test(a),
-    )
+    item.attributes.some((a): a is string => typeof a === "string" && /aceita\s*troca/i.test(a))
   ) {
     signals.aceita_troca = true;
   }
@@ -70,9 +68,7 @@ export function normalizeWebMotorsItem(raw: WebMotorsScraped): NormalizeResult {
 
   if (raw.id == null) return { ok: false, reason: "missing_required" };
   const sourceListingId = String(raw.id);
-  const fingerprint = createHash("sha256")
-    .update(`webmotors:${sourceListingId}`)
-    .digest("hex");
+  const fingerprint = createHash("sha256").update(`webmotors:${sourceListingId}`).digest("hex");
 
   const year =
     typeof raw.fabrication_year === "number"
@@ -125,7 +121,6 @@ export function normalizeWebMotorsItem(raw: WebMotorsScraped): NormalizeResult {
     status: "active",
   };
 
-  const needsFipe =
-    row.fipe == null && row.brand != null && row.model != null && row.year != null;
+  const needsFipe = row.fipe == null && row.brand != null && row.model != null && row.year != null;
   return { ok: true, row, needsFipe };
 }

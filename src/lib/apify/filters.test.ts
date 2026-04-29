@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { WebMotorsScraped } from "./types";
 import { detectBlockingFilter } from "./filters";
+import type { WebMotorsScraped } from "./types";
 
 function item(overrides: Partial<WebMotorsScraped> = {}): WebMotorsScraped {
   return { id: 1, title: "Honda Civic 2020", make: "Honda", model: "Civic", ...overrides };
@@ -59,9 +59,9 @@ describe("detectBlockingFilter", () => {
   });
 
   it("returns 'sinistro' when title contains 'caixa fundida'", () => {
-    expect(detectBlockingFilter(item({ title: "Vendo Civic — caixa fundida, mecânico já viu" }))).toBe(
-      "sinistro",
-    );
+    expect(
+      detectBlockingFilter(item({ title: "Vendo Civic — caixa fundida, mecânico já viu" })),
+    ).toBe("sinistro");
   });
 
   it("returns 'sinistro' when attributes include 'chassi danificado'", () => {

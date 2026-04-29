@@ -49,7 +49,10 @@ type Equals<X, Y> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y 
   ? true
   : false;
 
-// biome-ignore lint/correctness/noUnusedVariables: compile-time guard — the assignment is the test.
+// Compile-time guards: `_`-prefix tells biome these are intentionally unused
+// (no suppression comment needed — biome's noUnusedVariables exempts `_*`).
+// The assignments themselves are the test: if the adapter's return type drifts
+// from DbWishlist, `Equals<...>` resolves to `false` and the `: true` literal
+// assignment fails to compile.
 type _AdapterCoversRow = Equals<ReturnType<typeof formValuesToPendingWishlist>, DbWishlist>;
-// biome-ignore lint/correctness/noUnusedVariables: compile-time guard — fails the build if shapes drift.
 const _adapterCovers: _AdapterCoversRow = true;
