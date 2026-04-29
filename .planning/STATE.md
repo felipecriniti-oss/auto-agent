@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 8 plan 08 complete (fipe-retry hourly cron — D-04 backfill queue, 11 tests green); plans 07/09 remaining
-last_updated: "2026-04-26T15:00:57Z"
-last_activity: 2026-04-26 -- Phase 8 plan 08 complete (454 tests, all green; fipe-retry cron drains attributes.fipe_retry_pending=true queue chunked at 10/wave)
+stopped_at: Phase 9 plan 01 complete (engine PF-only hard rule, enforcePfOnly removed, 24 matching tests green); WishlistPreviewPane:67 typecheck error remains for Plan 09-02
+last_updated: "2026-04-29T23:20:38Z"
+last_activity: 2026-04-29 -- Phase 9 plan 01 complete (D-07 materialized: MatchingOptions.enforcePfOnly removed, listing.seller_type !== "PF" is now an unconditional short-circuit gate; 24/24 matching tests green)
 progress:
   total_phases: 10
   completed_phases: 1
@@ -130,6 +130,7 @@ Recent decisions affecting current work:
 - Streaming via SSE (não WebSockets) — compatível com Vercel Edge
 - 08-06: Filter rejects (sinistro/leilao/recall) do not count toward 20% failure threshold — only technical_errors do (Rule 1 fix to plan formula to satisfy plan's own sinistro test expectation)
 - 08-06: AbortSignal-based timeout APIFY_FETCH_TIMEOUT_MS = 55_000 (under Vercel's 60s default Node-runtime timeout)
+- 09-01: D-07 materialized — `MatchingOptions.enforcePfOnly` removed entirely, `listing.seller_type !== "PF"` is now an unconditional listing-level short-circuit gate; null seller_type treated as non-PF (defensive); only known caller is `WishlistPreviewPane.tsx:67` (typecheck-failing until Plan 09-02 ships)
 
 ### Pending Todos (for user, 2026-04-22 AM)
 
@@ -165,6 +166,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T14:46:55Z
-Stopped at: Completed 08-06-PLAN.md — webhook discriminator + Apify ingest + cost cap + scrape_runs lifecycle
-Resume file: .planning/phases/08-scraping-pipeline/08-07-PLAN.md
+Last session: 2026-04-29T23:20:38Z
+Stopped at: Completed 09-01-PLAN.md — engine PF-only hard rule, enforcePfOnly flag removed, 24/24 matching tests green
+Resume file: .planning/phases/09-matching-engine/09-02-PLAN.md
