@@ -35,7 +35,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 /**
@@ -64,6 +64,18 @@ export default function MarketplaceModule(): React.JSX.Element {
   const assumeDeal = useAppStore((s) => s.assumeDeal);
   const setActiveModule = useAppStore((s) => s.setActiveModule);
   const setActiveOpportunity = useAppStore((s) => s.setActiveOpportunity);
+  const resetMarketplaceUnread = useAppStore((s) => s.resetMarketplaceUnread);
+
+  // 09-05 (D-12, N-01): when the user is actively viewing Marketplace, the
+  // badge is 0 — everything currently rendered is "seen". Empty deps array
+  // is intentional: Zustand action references are stable across renders, so
+  // we only need this reset to fire ONCE on mount. The realtime hook bumps
+  // the counter back up when new opportunities arrive while the user is on
+  // a different module.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Zustand actions stable; mount-only reset.
+  useEffect(() => {
+    resetMarketplaceUnread();
+  }, []);
 
   const plan = plansConfig[currentPlan];
 
