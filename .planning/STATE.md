@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 9 plan 03 complete (POST /api/match/backfill endpoint shipped; MATCH_SCORE_THRESHOLD extracted to shared module — both webhook call sites + new backfill route consume it; counter semantics matched vs opportunities_created disambiguated per B-04; 9 backfill tests + 6 threshold tests + 1 webhook env-override test all green; 66/66 tests in matching+match+scrape suite)
-last_updated: "2026-04-29T20:30:00Z"
-last_activity: 2026-04-29 -- Phase 9 plan 03 complete (3 commits ac17e94/16769d6/d821118; B-02 + B-04 + N-02 fixes all materialized; D-08 single-source-of-truth holds across handleDirectListings + handleApifyRun + backfill)
+stopped_at: Phase 9 plan 04 complete (useCreateWishlist onSuccess wired to /api/match/backfill; sonner toast "Encontramos N oportunidade(s) para essa wishlist" with singular/plural correctness; D-06 silent on n=0; fail-soft on network/non-200; exact-key invalidate of ['supabase','opportunities',user_id] verified by vi.spyOn — W-05 fix; 12/12 wishlists hook tests green, 27/27 supabase suite, 30/30 matching suite no regression)
+last_updated: "2026-04-29T23:38:22Z"
+last_activity: 2026-04-29 -- Phase 9 plan 04 complete (2 commits f2d2376/0f502fd; backfill wired to wishlist-create flow; 7 new tests covering happy path + n=0 silent + singular form + 2 fail-soft branches + exact-key invalidate spy; first hook test in repo to assert against sonner — pattern established for future hook tests)
 progress:
   total_phases: 10
   completed_phases: 1
@@ -133,6 +133,7 @@ Recent decisions affecting current work:
 - 09-01: D-07 materialized — `MatchingOptions.enforcePfOnly` removed entirely, `listing.seller_type !== "PF"` is now an unconditional listing-level short-circuit gate; null seller_type treated as non-PF (defensive); only known caller is `WishlistPreviewPane.tsx:67` (typecheck-failing until Plan 09-02 ships)
 - 09-02: D-07 closed end-to-end — WishlistPreviewPane caller dropped the `{ enforcePfOnly: false }` third arg; stale L2/L6 doc-comments referencing the removed flag cleaned; mocks at preview-listings.ts confirmed 20/20 PF-stamped (no edit needed); `grep -rn "enforcePfOnly" src/` now returns 0 lines
 - 09-03: D-08 materialized — `src/lib/matching/threshold.ts` exposes `getMatchScoreThreshold()` reading `MATCH_SCORE_THRESHOLD` env var (default 0.7, validated [0,1]); both webhook call sites (handleDirectListings line 212 + handleApifyRun line 400) and the new backfill route consume the same module; B-04 counter semantics — `matched` (engine-pass count, PRE-threshold) vs `opportunities_created` (above-threshold + non-dedup) — implemented in `/api/match/backfill` and tested with the 3-bucket fixture; deviation: second hardcoded threshold site in handleApifyRun (line 400) was discovered by sanity grep and fixed in same commit as the planned line-212 fix (Rule 3)
+- 09-04: D-05 + D-06 materialized — `useCreateWishlist.onSuccess` async, posts `{wishlist_id: data.id}` to `/api/match/backfill`, parses `{matched, opportunities_created}`; toasts "Encontramos N oportunidade(s) para essa wishlist" with singular/plural ternary only when n>0 (D-06 silent on n=0); fail-soft on `!res.ok` (console.error + return) and on fetch reject (catch + console.error); opportunities query invalidation gated on n>0 with exact key `['supabase','opportunities',user_id]`; W-05 fix — test asserts via `vi.spyOn(queryClient,'invalidateQueries')` with exact-array `queryKey` match, not loose containing; sonner mock pattern established (first hook test in repo to assert against sonner — mirrors FipeModelCombobox.test.tsx); deviation: out-of-scope `src/lib/stores/app.{ts,test.ts}` (Plan 09-05 marketplace-unread-badge groundwork) was already staged in the index when this plan started and got swept into commit 0f502fd; functionality is forward-compatible and 09-05 will not need to re-add it
 
 ### Pending Todos (for user, 2026-04-22 AM)
 
@@ -168,6 +169,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-29T20:30:00Z
-Stopped at: Completed 09-03-PLAN.md — POST /api/match/backfill endpoint live, MATCH_SCORE_THRESHOLD extracted to shared module, both webhook call sites updated; 9 backfill tests + 6 threshold tests + 1 webhook env-override test green; B-02 + B-04 + N-02 fixes all materialized
-Resume file: .planning/phases/09-matching-engine/09-04-PLAN.md
+Last session: 2026-04-29T23:38:22Z
+Stopped at: Completed 09-04-PLAN.md — useCreateWishlist.onSuccess wired to POST /api/match/backfill with selective sonner toast (D-06 silent on n=0, singular/plural correct), fail-soft on fetch error / non-200, exact-key invalidate of opportunities query verified by vi.spyOn; 12/12 useWishlists hook tests, 27/27 supabase suite, 30/30 matching suite — no regression
+Resume file: .planning/phases/09-matching-engine/09-05-PLAN.md

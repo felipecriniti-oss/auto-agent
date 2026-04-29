@@ -137,8 +137,8 @@ Referência: `.planning/PIVOT-3.md` para rationale completo da reorganização.
 **Plans:**
 - [x] 09-01-PLAN.md — Matching engine: drop enforcePfOnly, PF as hard rule + tests (wave 1) ✓ 2026-04-29
 - [x] 09-02-PLAN.md — WishlistPreviewPane caller fix + mock dataset PF sanity check (wave 2) ✓ 2026-04-29
-- [ ] 09-03-PLAN.md — POST /api/match/backfill endpoint + tests (dedup, 30d window, PJ inheritance, fee tier) (wave 2)
-- [ ] 09-04-PLAN.md — useCreateWishlist onSuccess: backfill + selective toast + tests (wave 3)
+- [x] 09-03-PLAN.md — POST /api/match/backfill endpoint + tests (dedup, 30d window, PJ inheritance, fee tier) (wave 2) ✓ 2026-04-29
+- [x] 09-04-PLAN.md — useCreateWishlist onSuccess: backfill + selective toast + tests (wave 3) ✓ 2026-04-29
 - [ ] 09-05-PLAN.md — useOpportunityRealtime hook + Zustand badge counter + Marketplace sidebar item + AppShell mount (wave 3)
 
 ### Phase 13a: Billing + access control + Stripe 🆕 PROMOVIDO
@@ -223,7 +223,7 @@ Phase 12 tem dep hard de Phase 9 (opportunities) + Phase 13a (fee checkout).
 | **6. Supabase foundation** | 🔜 **em execução** | Scaffold 50% — auth UI + hooks faltando |
 | 7. Wishlist UI | ✅ **complete** 2026-04-25 | 12/12 plans, 381 tests; HUMAN-UAT pending; 1 high finding (form sheet portal) |
 | 8. Scraping + hardening | seeded | parallel com 7 |
-| 9. Matching engine | 🔄 **in progress** (3/5 plans done) | 09-01 PF hard rule ✅, 09-02 preview-pane ✅, 09-03 backfill endpoint + threshold module ✅; 09-04 (useCreateWishlist onSuccess wire-up) + 09-05 (realtime toast) remaining |
+| 9. Matching engine | 🔄 **in progress** (4/5 plans done) | 09-01 PF hard rule ✅, 09-02 preview-pane ✅, 09-03 backfill endpoint + threshold module ✅, 09-04 useCreateWishlist onSuccess backfill + toast ✅; 09-05 (realtime toast) remaining |
 | 13a. Billing + access | seeded 🆕 | after 6 (parallel OK) |
 | 13b. Digital contracts | seeded 🆕 | after 13a |
 | 12. Opportunities dashboard | seeded (reframed) | after 9+13a |
