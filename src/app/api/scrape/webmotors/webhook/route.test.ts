@@ -352,6 +352,95 @@ describe("POST /api/scrape/webmotors/webhook — happy path", () => {
     const oppUpsert = upsertCalls.find((c) => c.table === "opportunities");
     expect(oppUpsert).toBeDefined();
   });
+
+  it("uses getMatchScoreThreshold() — env override changes the cutoff", async () => {
+    // The fixture above scores ~0.93 (0.5 baseline + 0.35 savings_pct≥30 + 0.08 motivated).
+    // With default threshold 0.7 the listing creates an opportunity. With env override 0.95
+    // it must NOT — the filter at route.ts:212 reads getMatchScoreThreshold() per call.
+    const originalThreshold = process.env.MATCH_SCORE_THRESHOLD;
+    process.env.MATCH_SCORE_THRESHOLD = "0.95";
+    try {
+      listingsUpsertResult = {
+        data: {
+          id: "listing-uuid-thr",
+          source: "webmotors",
+          source_listing_id: "wm-test-thr",
+          fingerprint: "fp-test-thr",
+          brand: "Honda",
+          model: "Civic",
+          trim: null,
+          year: 2020,
+          km: 45000,
+          price: 70000,
+          fipe: 110000,
+          savings_vs_fipe: 40000,
+          savings_pct: 36.4,
+          seller_type: "PF",
+          seller_location: null,
+          seller_uf: "SP",
+          seller_city: "São Paulo",
+          listing_url: null,
+          photo_url: null,
+          days_online: null,
+          reductions: null,
+          attributes: {},
+          motivation_signals: { motivated: true },
+          first_seen_at: "2026-04-22T00:00:00Z",
+          last_scraped_at: "2026-04-22T00:00:00Z",
+          status: "active",
+          created_at: "2026-04-22T00:00:00Z",
+          updated_at: "2026-04-22T00:00:00Z",
+        },
+        error: null,
+      };
+      wishlistsSelectResult = {
+        data: [
+          {
+            id: "wl-thr",
+            user_id: "user-thr",
+            name: "Civic Wishlist",
+            brand: "Honda",
+            model: "Civic",
+            trim: null,
+            year_min: 2018,
+            year_max: 2024,
+            km_max: 80000,
+            price_max: 130000,
+            fuel_type: [],
+            transmission: [],
+            armored: null,
+            region_uf: ["SP"],
+            region_cities: [],
+            status: "active",
+            created_at: "2026-04-22T00:00:00Z",
+            updated_at: "2026-04-22T00:00:00Z",
+          },
+        ],
+        error: null,
+      };
+      usersSelectResult = { data: [{ id: "user-thr", plan: "premium" }], error: null };
+      opportunitiesUpsertResult = {
+        data: { id: "opp-uuid-thr", user_id: "user-thr", wishlist_id: "wl-thr" },
+        error: null,
+      };
+
+      const { POST } = await importRoute();
+      const res = await POST(makeRequest([validListing]));
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.listings_processed).toBe(1);
+      // Below the 0.95 cutoff → no opportunity created, despite a match
+      expect(body.opportunities_created).toBe(0);
+      const oppUpsert = upsertCalls.find((c) => c.table === "opportunities");
+      expect(oppUpsert).toBeUndefined();
+    } finally {
+      if (originalThreshold === undefined) {
+        Reflect.deleteProperty(process.env, "MATCH_SCORE_THRESHOLD");
+      } else {
+        process.env.MATCH_SCORE_THRESHOLD = originalThreshold;
+      }
+    }
+  });
 });
 
 // ─── NEW Phase 8 describes (added below existing Phase 7 tests) ─────────────

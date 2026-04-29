@@ -34,6 +34,7 @@ import type { WebMotorsScraped } from "@/lib/apify/types";
 import { verifySharedSecret } from "@/lib/apify/webhook-auth";
 import { normalizeWebMotorsItem } from "@/lib/apify/webmotors-normalize";
 import { matchListingToWishlists } from "@/lib/matching/engine";
+import { getMatchScoreThreshold } from "@/lib/matching/threshold";
 import { getSupabaseServiceRole } from "@/lib/supabase/server";
 import type { DbListing, DbWishlist, Plan } from "@/types/database";
 import { z } from "zod";
@@ -208,7 +209,7 @@ async function handleDirectListings(body: z.infer<typeof webhookBodySchema>): Pr
     const matches = matchListingToWishlists(
       upserted as DbListing,
       (wishlists ?? []) as DbWishlist[],
-    ).filter((m) => m.score >= 0.7);
+    ).filter((m) => m.score >= getMatchScoreThreshold());
 
     let createdForThisListing = 0;
     for (const match of matches) {
@@ -396,7 +397,7 @@ async function handleApifyRun(payload: z.infer<typeof apifyEventSchema>): Promis
       const matches = matchListingToWishlists(
         upserted as DbListing,
         (wishlists ?? []) as DbWishlist[],
-      ).filter((m) => m.score >= 0.7);
+      ).filter((m) => m.score >= getMatchScoreThreshold());
 
       for (const match of matches) {
         const wishlist = (wishlists ?? []).find((w) => w.id === match.wishlist_id);
