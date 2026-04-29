@@ -32,10 +32,6 @@ type Props = {
  * Landmines:
  *   - L1: engine signature is matchListingToWishlists(listing, wishlists[]) — the inverse loop
  *     is mandatory. Per-listing call with a single-wishlist array, count non-empty results.
- *   - L2: enforcePfOnly:false — preview permits all sellers (production DB trigger still enforces
- *     PF-only when real opportunities are created in Phase 9).
- *   - L6: enforcePfOnly must be explicitly passed false — default is true and would zero out the
- *     count even for matching mocks.
  *   - Adapter MUST set status="active" — engine short-circuits non-active listings/wishlists.
  */
 export function WishlistPreviewPane({ control }: Props): React.JSX.Element {
@@ -64,7 +60,7 @@ export function WishlistPreviewPane({ control }: Props): React.JSX.Element {
       let c = 0;
       const matched: DbListing[] = [];
       for (const listing of snapshot) {
-        const results = matchListingToWishlists(listing, [pending], { enforcePfOnly: false });
+        const results = matchListingToWishlists(listing, [pending]);
         if (results.length > 0) {
           c += 1;
           if (matched.length < 3) matched.push(listing);
