@@ -155,7 +155,6 @@ function armoredMatches(listing: DbListing, wishlist: DbWishlist): boolean {
 
 export type MatchingOptions = {
   threshold?: number; // minimum score to be considered opportunity-worthy
-  enforcePfOnly?: boolean; // default true; skip PJ listings
 };
 
 export function matchListingToWishlists(
@@ -163,11 +162,9 @@ export function matchListingToWishlists(
   wishlists: DbWishlist[],
   opts: MatchingOptions = {},
 ): MatchResult[] {
-  const enforcePf = opts.enforcePfOnly ?? true;
-
   // Short-circuit gates that kill the listing for every wishlist
   if (listing.status !== "active") return [];
-  if (enforcePf && listing.seller_type !== "PF") return [];
+  if (listing.seller_type !== "PF") return [];
 
   const results: MatchResult[] = [];
 
