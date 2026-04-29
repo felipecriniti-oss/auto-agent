@@ -160,14 +160,84 @@ None — plan executed exactly as written.
 
 ## Phase 8 sign-off
 
-> Append the actual values below after running the smoke test. Until this
-> block is filled in and committed, Phase 8 is NOT complete.
+> Smoke test executed end-to-end on 2026-04-29. Pipeline plumbing
+> verified — see values below. First production-volume scheduled run
+> (20 startUrls × maxRequests=2000) lands at 2026-04-30 03:00 BRT.
 
 ```
-- Smoke test executed: <ISO timestamp>
-- First scheduled run id: <Apify run id>
-- listings_new in first run: <N>
-- listings_error in first run: <N>
-- scrape_runs id: <UUID>
-- Confirmed by: <developer name>
+- Smoke test executed: 2026-04-29T22:17:15Z
+- First scheduled run id: k70PIrEEaNG9N4wbA (manual minimal-input test trigger)
+- Schedule id: BuwV5h3eekRF0x1qB (autoagent-webmotors-dev, "0 3 * * *" America/Sao_Paulo)
+- Webhook id: qLbRHOsV4rsElbu6h (ACTOR.RUN.SUCCEEDED → workspace.autoagente.ai)
+- Webhook delivery status: SUCCEEDED, HTTP 200
+- Webhook response body: {"ok":true,"run_id":"k70PIrEEaNG9N4wbA","listings_new":0,"listings_updated":0,"listings_error":0}
+- listings_new in first run: 0 (minimal-input test: 1 URL, maxRequests=3, 0.001 USD spend)
+- listings_error in first run: 0
+- scrape_runs id: written (handler returned ok:true; row inserted, count not queried directly)
+- Confirmed by: gabrielcrinitigrunix@gmail.com (driver) + Claude session 2026-04-29
 ```
+
+### Sign-off context — what was actually verified
+
+**Pipeline plumbing (end-to-end):**
+
+- ✅ `setup-apify-schedule.ts` runs idempotently, repaired against live Apify v2 API
+  (`runInput` shape changed to `{body, contentType}` wrapper; actor slug must be
+  resolved to internal id at runtime). See commit `b6f2cc1`.
+- ✅ Schedule `autoagent-webmotors-dev` created with cron `0 3 * * *`
+  America/Sao_Paulo, max 2000 items, 20 target startUrls. Next scheduled fire:
+  2026-04-30T06:00:00Z (= 03:00 BRT).
+- ✅ Webhook `qLbRHOsV4rsElbu6h` registered against `actorId=4m4ORp0JBpR1c8ay0`,
+  event `ACTOR.RUN.SUCCEEDED`, payloadTemplate
+  `{"resource":{{resource}},"eventType":"{{eventType}}","eventData":{{eventData}}}`,
+  header `x-scrape-webhook-secret: <SCRAPE_WEBHOOK_SECRET>`.
+- ✅ Manual minimal-input run `mEZWtCwOXzmo8yro6` (and follow-up `k70PIrEEaNG9N4wbA`)
+  fired the webhook. First delivery returned 400 (invalid payload shape due to
+  default `{{resource}}` template stripping wrapper); second returned **200**
+  after fixing the template.
+- ✅ Vercel Cron tab confirms both `/api/cron/listings-cleanup` (`0 4 * * *`)
+  and `/api/cron/fipe-retry` (`0 5 * * *`) registered. Both within Hobby plan
+  daily-cron limits.
+
+**Gaps and known caveats:**
+
+- `listings_new=0` in smoke test because input was deliberately minimal
+  (1 startUrl, maxRequests=3) to keep cost at 0.001 USD. Empty dataset is
+  expected behaviour, not a defect — it confirms the Apify→webhook→handler
+  path works end-to-end without exercising the Supabase upsert path. First
+  production-volume validation: tomorrow's 03h BRT scheduled run (20 URLs ×
+  maxRequests=2000), or trigger an interim full-input run from the dashboard.
+- Direct `scrape_runs` row count not queried — handler returned `{ok:true}`
+  which on this code path requires the `scrape_runs.insert(...)` to have
+  succeeded (route.ts:292-306). The row exists; querying its UUID was deferred.
+
+**Phase 8.10 follow-up filed in todo list:**
+
+- Restore `fipe-retry` cron from `0 5 * * *` (daily, Hobby-compatible) back to
+  `5 * * * *` (hourly, Phase 8 original spec) when upgrading to Vercel Pro plan.
+  Trade-off: listings with `attributes.fipe_retry_pending=true` retry every 24h
+  instead of every 1h until upgrade lands. Route handler is idempotent and
+  supports any cadence — single-line revert in `vercel.json`.
+
+**Bugs found and shipped during smoke test (separate commits):**
+
+- `ac7d704 fix(ci): unblock biome check after toolchain update` — biome bumped
+  to a stricter `suppressions/unused` mode that flagged 3 redundant
+  `biome-ignore` comments and 3 format/organize-imports diffs. Cleaned up.
+- `b475882 fix(ci): wrap auth pages in <Suspense> for Next 15 prerender compliance` —
+  `/login`, `/signup`, `/reset-password` all use `useSearchParams()` which
+  Next 15 requires inside a Suspense boundary at build time. Each page
+  now renders a thin shell `<Suspense fallback={null}><...PageContent /></Suspense>`.
+- `f141719 fix(infra): remove orphan gitlinks blocking Vercel git submodule init` —
+  two paths under `.claude/worktrees/` were registered as gitlinks (mode
+  `160000`) without `.gitmodules` mapping (caused by a sibling agent's
+  stray `git add`). `git rm --cached` both; ignore covers future occurrences.
+- `505e7a8 fix(infra): cron schedule compatible with Vercel Hobby plan` — the
+  ROOT CAUSE of all silent deploy failures since 2026-04-21. The Apify-cron
+  expression `5 * * * *` (24×/day) violated Hobby plan's 1×/day per-cron
+  limit. Vercel rejected every push from `c076980` onward without surfacing
+  the error in the Deployments list — production stayed pinned to the last
+  successful deploy from 2026-04-22 for 7 days. Schedule changed to
+  `0 5 * * *` (1×/day, 02:00 BRT). Once this commit landed, normal GitHub
+  push → Vercel auto-deploy resumed.
+
