@@ -26,7 +26,7 @@ import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { ArrowRight, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const MIN_PASSWORD = 8;
@@ -35,6 +35,14 @@ const MIN_STRENGTH_SCORE = 2;
 type Phase = "request" | "sent" | "set-new";
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordPageContent />
+    </Suspense>
+  );
+}
+
+function ResetPasswordPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefilledEmail = searchParams?.get("email") ?? "";

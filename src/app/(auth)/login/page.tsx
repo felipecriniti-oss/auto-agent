@@ -22,10 +22,18 @@ import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefilledEmail = searchParams?.get("email") ?? "";

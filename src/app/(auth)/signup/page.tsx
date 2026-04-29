@@ -27,13 +27,21 @@ import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { ArrowRight, Mail } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const MIN_PASSWORD = 8;
 const MIN_STRENGTH_SCORE = 2; // zxcvbn "razoável" — blocks weak + very weak
 
 export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupPageContent />
+    </Suspense>
+  );
+}
+
+function SignupPageContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
