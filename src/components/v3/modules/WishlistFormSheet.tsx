@@ -28,7 +28,7 @@ import { summarize } from "@/lib/wishlist/summarize";
 import type { DbWishlist } from "@/types/database";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { X } from "lucide-react";
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -181,10 +181,44 @@ export function WishlistFormSheet({
     }
   }
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     onOpenChange?.(false);
     form.reset(initial ? dbToForm(initial) : DEFAULT_VALUES);
-  };
+  }, [onOpenChange, form, initial]);
+
+  // HUMAN-UAT Test 2 fix (Phase 7-13):
+  //   - Snapshot the previously-focused element on open, restore it on close.
+  //     Works for both desktop <aside> and mobile Radix Dialog branches without
+  //     requiring callers to pass a triggerRef.
+  //   - Listen for Escape on document and call handleCancel() — desktop only,
+  //     because Radix Dialog (mobile branch) already handles Escape natively.
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    previouslyFocusedRef.current =
+      typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
+    return () => {
+      const el = previouslyFocusedRef.current;
+      if (el && typeof el.focus === "function") {
+        // Defer to next tick so the close animation/unmount completes before
+        // refocus — otherwise the browser may race and steal focus back to body.
+        queueMicrotask(() => el.focus());
+      }
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !isDesktop) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleCancel();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, isDesktop, handleCancel]);
 
   if (layout === "sheet" && !open) return null;
 
@@ -458,9 +492,18 @@ export function WishlistFormSheet({
           onClick={handleCancel}
           className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm"
         />
-        <aside className="fixed inset-y-0 right-0 z-50 flex w-[560px] flex-col overflow-hidden bg-white shadow-2xl dark:bg-slate-950">
+        {/* biome-ignore lint/a11y/useSemanticElements: <dialog> element requires imperative .showModal()/.close() control, breaking our declarative `open` prop pattern. <aside> with role=dialog + aria-modal preserves the side-panel layout semantics while still being announced correctly by AT. */}
+        <aside
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="wishlist-form-sheet-title"
+          className="fixed inset-y-0 right-0 z-50 flex w-[560px] flex-col overflow-hidden bg-white shadow-2xl dark:bg-slate-950"
+        >
           <header className="flex items-center justify-between border-slate-200 border-b px-6 py-4 dark:border-slate-800">
-            <h2 className="font-semibold text-lg text-slate-900 dark:text-slate-100">
+            <h2
+              id="wishlist-form-sheet-title"
+              className="font-semibold text-lg text-slate-900 dark:text-slate-100"
+            >
               {isEdit ? "Editar wishlist" : "Nova wishlist"}
             </h2>
             <Button variant="ghost" size="sm" onClick={handleCancel} aria-label="Fechar">

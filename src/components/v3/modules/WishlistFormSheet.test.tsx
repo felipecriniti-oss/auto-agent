@@ -175,4 +175,114 @@ describe("WishlistFormSheet", () => {
     const nameInput = screen.getByPlaceholderText("Honda Civic 2018+ SP") as HTMLInputElement;
     expect(nameInput.value).toBe("Meu Civic");
   });
+
+  // ─── Phase 7-13 / HUMAN-UAT Test 2 fix ─────────────────────────────────────
+  // When the sheet opens on desktop (isDesktop = matchMedia("(min-width: 768px)")
+  // matches), pressing Escape must close it via handleCancel(), and on close
+  // focus must return to whatever element had focus before the sheet opened.
+  // The mobile Radix <Dialog> branch handles Escape natively; our document-level
+  // listener is gated to `isDesktop` so it doesn't double-fire there.
+
+  function setMatchMedia(matches: boolean) {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  }
+
+  it("desktop: Escape calls onOpenChange(false) and closes the sheet", async () => {
+    setMatchMedia(true);
+    const { Wrapper } = makeWrapper();
+    render(<WishlistFormSheet layout="sheet" open onOpenChange={mockOnOpenChange} />, {
+      wrapper: Wrapper,
+    });
+
+    // The aside is announced as a modal dialog
+    expect(screen.getByRole("dialog", { name: "Nova wishlist" })).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(mockOnOpenChange).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it("desktop: Escape listener is removed when the sheet closes (no leaked handler)", () => {
+    setMatchMedia(true);
+    const { Wrapper } = makeWrapper();
+    const { rerender } = render(
+      <WishlistFormSheet layout="sheet" open onOpenChange={mockOnOpenChange} />,
+      { wrapper: Wrapper },
+    );
+
+    // Close the sheet — desktop listener should detach
+    rerender(<WishlistFormSheet layout="sheet" open={false} onOpenChange={mockOnOpenChange} />);
+
+    // Now Escape should NOT call onOpenChange (listener removed)
+    mockOnOpenChange.mockClear();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(mockOnOpenChange).not.toHaveBeenCalled();
+  });
+
+  it("mobile: Escape still closes the sheet (Radix Dialog handles natively)", async () => {
+    setMatchMedia(false); // < 768px → mobile branch
+    const { Wrapper } = makeWrapper();
+    render(<WishlistFormSheet layout="sheet" open onOpenChange={mockOnOpenChange} />, {
+      wrapper: Wrapper,
+    });
+
+    // We don't attach our document listener on mobile (gated to isDesktop),
+    // but Radix Dialog has its own native Escape handler that wires through
+    // to our onOpenChange prop. Test asserts the BEHAVIOR works on both
+    // branches; the desktop branch is covered by the dedicated test above.
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(mockOnOpenChange).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it("desktop: closing the sheet restores focus to the trigger element", async () => {
+    setMatchMedia(true);
+    const { Wrapper } = makeWrapper();
+
+    function Harness({ open }: { open: boolean }) {
+      return (
+        <>
+          <button type="button" data-testid="trigger">
+            + Nova Wishlist
+          </button>
+          <WishlistFormSheet layout="sheet" open={open} onOpenChange={mockOnOpenChange} />
+        </>
+      );
+    }
+
+    const { rerender } = render(<Harness open={false} />, { wrapper: Wrapper });
+
+    // Focus the trigger BEFORE the sheet opens — this is what we expect to
+    // be restored on close.
+    const trigger = screen.getByTestId("trigger");
+    trigger.focus();
+    expect(document.activeElement).toBe(trigger);
+
+    // Open the sheet — focus moves into the dialog
+    rerender(<Harness open={true} />);
+
+    // Close the sheet — focus should restore to the trigger
+    rerender(<Harness open={false} />);
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(trigger);
+    });
+  });
 });

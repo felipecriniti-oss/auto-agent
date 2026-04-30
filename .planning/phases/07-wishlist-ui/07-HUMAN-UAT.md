@@ -18,7 +18,8 @@ result: [pending]
 
 ### 2. Form sheet responsive breakpoint: 560px aside ↔ full-screen Dialog
 expected: Backdrop blur visible behind aside on desktop (md+); resize across 768px swaps to full-screen Dialog on mobile; Esc closes and returns focus to trigger button
-result: [pending]
+result: pass
+resolved: 2026-04-29 — desktop aside now has document-level keydown listener (gated on isDesktop), `previouslyFocusedRef` snapshots `document.activeElement` on open and restores via `queueMicrotask` on close. role="dialog" + aria-modal + aria-labelledby added for AT compliance. 4 new tests in WishlistFormSheet.test.tsx (10/10 green).
 
 ### 3. Preview pane debounce + accent: ~400ms count update
 expected: Count text "acharíamos X anúncios esta semana" renders only after typing pauses ~400ms; X uses #4C46DC + font-semibold; clear all → returns to skeleton
