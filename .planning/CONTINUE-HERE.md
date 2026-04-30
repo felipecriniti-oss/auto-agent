@@ -129,12 +129,34 @@ impl) + `supabase/migrations/0004_kyc_documents.sql` (table + Storage bucket pol
 6. Phase 7 HIGH-01 popover-bubble Esc — pre-demo polish
 7. Phase 8.10 — restore fipe-retry hourly when Vercel Pro ($20/mo)
 
-## CRITICAL: don't re-do these
+## State preserved across sessions (so next agent doesn't re-derive)
 
-- **Don't re-spawn discuss-phase / plan-phase for Phase 9** — context already locked
-- **Don't redeploy via vercel CLI** — pipeline is auto-deploy via GitHub now
-  (commit f141719 fixed orphan gitlinks; commit 505e7a8 fixed cron)
-- **Don't ask user "do you want to use Stripe"** — they explicitly said no, pai is
-  evaluating other Brazilian payment processors. Stripe-shaped Phase 13a is on hold.
-- **Don't re-scan all docs in Downloads/** — last session already did that twice
-  searching for KYC/onboarding details. None found beyond v2.2 hints.
+### Don't re-do (already locked in main)
+
+- **Phase 9 discuss/plan/execute** — context locked in `.planning/phases/09-matching-engine/09-CONTEXT.md` (D-01..D-14). Don't re-spawn discuss-phase or plan-phase for it.
+- **Vercel deploy pipeline** — auto-deploy via GitHub works since commit `505e7a8` (cron fix) + `f141719` (orphan gitlinks fix). Don't run `vercel deploy --prod`; it's redundant and can fight the auto-deploy.
+- **Stripe direction** — user explicitly rejected Stripe; pai is evaluating other Brazilian payment processors (Asaas / Pagar.me / MercadoPago / Iugu / PagBank / EBANX). Phase 13a as Stripe-specific is on hold. Don't propose Stripe.
+
+### Spec scan results (re-scan if you want, but here's the cache)
+
+If you re-scan `C:\Users\pc\Downloads\projeto autoagent atualizado/` and `C:\Users\pc\Downloads\` (older folder + adendos + ideias_texto + autoagente_reescrita + "coisas para questionar e arrumar.txt"), here's what you'll find regarding **lojista onboarding** (the pai said "está longe de estar completo"):
+
+- **PRD_AutoAgent_v3.md** — no onboarding section
+- **PRD_AutoAgent_v2.md** — no onboarding section
+- **AutoAgent_UX_Prototype_v3.jsx:862-931** — `OnboardingModule` with only 4 fields (Nome, E-mail, WhatsApp, Senha) → success screen "Pronto pra começar"
+- **AutoAgente_Spec_Tecnico_v1.docx** — focuses on agent algorithm, no lojista onboarding
+- **AutoAgent_Adendo_Estrategico_v2.2.md:76** — "No dia 1 após cadastrar conta, lojista já tem algo útil — liga Descoberta Ativa"; line 126 mentions "Redução de atrito de onboarding" but no detail
+- **coisas para questionar e arrumar no projeto autoagente.txt** — explicit pai todo: "acabar de preparar database metodo de pagamento"
+- **autoagente_reescrita.docx + ideias_texto_autoagente.docx** — landing-page copy only, not onboarding
+
+**Conclusion:** no doc has a detailed lojista onboarding spec. Pai may be referring to a doc not yet shared OR verbal direction. Last session's escalation message asks the user to confirm with the pai which file/source has the detail he was remembering. If the user comes back with a NEW doc or verbal spec, re-derive from that — don't try to reverse-engineer "what onboarding should look like" from existing docs.
+
+### Current `/app/onboarding` implementation (3 steps, ~110 LoC)
+
+`src/app/app/onboarding/page.tsx`:
+1. Nome completo + Empresa + Cidade + UF
+2. CNPJ (optional)
+3. First wishlist creation (or "Pular e fazer depois")
+→ flips `users.onboarding_complete=true`, redirects to `/app`
+
+This is more than the UX prototype's 4-field minimal version, but per the pai it's "far from complete." Likely missing (deduced, not spec'd): plan tier picker, KYC document uploads, payment method, agent activation toggle, dashboard tour, T&C acceptance, "Conta verificada" badge mechanic.
