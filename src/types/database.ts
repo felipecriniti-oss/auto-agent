@@ -11,6 +11,17 @@
 export type Plan = "starter" | "premium" | "enterprise";
 export type UserRole = "lojista" | "admin";
 export type WishlistStatus = "active" | "paused" | "archived";
+export type KycStatus = "pending" | "submitted" | "verified" | "rejected" | "expired";
+export type TipoOperacao = "loja_fisica" | "patio" | "home_office" | "consignacao" | "investidor";
+export type VolumeMensal = "1-5" | "6-15" | "16-30" | "30+";
+export type KycDocType =
+  | "rg_frente"
+  | "rg_verso"
+  | "cnh_frente"
+  | "cnh_verso"
+  | "selfie"
+  | "comprovante"
+  | "contrato_social";
 export type ListingStatus = "active" | "removed" | "stale";
 export type SellerType = "PF" | "PJ";
 export type OpportunityStatus =
@@ -51,9 +62,23 @@ export type Tables = {
       name: string | null;
       company_name: string | null;
       cnpj: string | null;
+      cnpj_razao_social: string | null;
+      cnpj_situacao: string | null;
+      cnpj_cnae: string | null;
+      phone: string | null;
+      phone_verified: boolean;
+      tipo_operacao: TipoOperacao | null;
+      volume_mensal: VolumeMensal | null;
+      lead_source: string | null;
       plan: Plan;
       role: UserRole;
       onboarding_complete: boolean;
+      kyc_status: KycStatus;
+      kyc_submitted_at: string | null;
+      kyc_verified_at: string | null;
+      kyc_rejection_reason: string | null;
+      kyc_provider_ref: string | null;
+      kyc_expires_at: string | null;
       city: string | null;
       uf: string | null;
       created_at: string;
@@ -65,9 +90,23 @@ export type Tables = {
       name?: string | null;
       company_name?: string | null;
       cnpj?: string | null;
+      cnpj_razao_social?: string | null;
+      cnpj_situacao?: string | null;
+      cnpj_cnae?: string | null;
+      phone?: string | null;
+      phone_verified?: boolean;
+      tipo_operacao?: TipoOperacao | null;
+      volume_mensal?: VolumeMensal | null;
+      lead_source?: string | null;
       plan?: Plan;
       role?: UserRole;
       onboarding_complete?: boolean;
+      kyc_status?: KycStatus;
+      kyc_submitted_at?: string | null;
+      kyc_verified_at?: string | null;
+      kyc_rejection_reason?: string | null;
+      kyc_provider_ref?: string | null;
+      kyc_expires_at?: string | null;
       city?: string | null;
       uf?: string | null;
     };
@@ -354,6 +393,27 @@ export type Tables = {
     Relationships: [];
   };
 
+  kyc_documents: {
+    Row: {
+      id: string;
+      user_id: string;
+      doc_type: KycDocType;
+      storage_path: string;
+      ocr_data: Record<string, unknown>;
+      verified: boolean;
+      created_at: string;
+    };
+    Insert: {
+      user_id: string;
+      doc_type: KycDocType;
+      storage_path: string;
+      ocr_data?: Record<string, unknown>;
+      verified?: boolean;
+    };
+    Update: Partial<Tables["kyc_documents"]["Insert"]>;
+    Relationships: [];
+  };
+
   opt_out_list: {
     Row: {
       id: string;
@@ -414,4 +474,5 @@ export type DbOutboxItem = Tables["pending_outbox"]["Row"];
 export type DbScrapeRun = Tables["scrape_runs"]["Row"];
 export type DbDeal = Tables["deals"]["Row"];
 export type DbSubscription = Tables["subscriptions"]["Row"];
+export type DbKycDocument = Tables["kyc_documents"]["Row"];
 export type DbOpportunityEnriched = Database["public"]["Views"]["opportunities_enriched"]["Row"];

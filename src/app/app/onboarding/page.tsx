@@ -3,17 +3,18 @@
 /**
  * /app/onboarding — profile setup wizard (post-auth).
  *
- * Replaces the fake Phase 5 persona-picker in SignupView. After magic-link
- * verification the callback routes new users here; after they complete the
- * wizard, users.onboarding_complete=true, and subsequent logins land on /app.
+ * v3.2 Onboarding: 4-step wizard with progressive KYC.
  *
- * Two steps (billing/plan picker is deferred to Phase 13a):
- *   1. Nome completo + Empresa + Cidade (+ UF dropdown)
- *   2. CNPJ (optional, mask 00.000.000/0000-00)
+ * Steps 1-3 (required to access marketplace):
+ *   1. Nome + Empresa + Cidade/UF + Telefone WhatsApp (OTP) + Tipo Operação + Volume
+ *   2. CNPJ (obrigatório, auto-fill via ReceitaWS) + Lead Source
+ *   3. Primeira Wishlist (unchanged from v1)
  *
- * Uses Fraunces + slate editorial treatment — preserves the Phase 5
- * SignupView aesthetic that the user liked, just moves the gesture to
- * post-auth instead of pre-auth.
+ * Step 4 (KYC — required before first "Assumir Deal"):
+ *   4. Upload RG/CNH + Selfie + Comprovante + Contrato Social
+ *
+ * After Step 3: onboarding_complete=true, user enters /app.
+ * Step 4 is accessed later from dashboard or when attempting to assume a deal.
  */
 
 import { LocalidadePicker } from "@/components/forms/LocalidadePicker";
@@ -24,17 +25,28 @@ import { WishlistFormSheet } from "@/components/v3/modules/WishlistFormSheet";
 import { cidadeExisteNoUf } from "@/lib/brasil/localidades";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { useSupabaseUser } from "@/lib/supabase/hooks/useSupabaseUser";
-import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import type { CnpjLookupResult } from "@/app/api/cnpj/route";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  CheckCircle2,
+  Loader2,
+  Phone,
+  ShieldCheck,
+  AlertTriangle,
+} from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 type Step = 1 | 2 | 3;
 
+/* ─── Masks ───────────────────────────────────────────────────────────────── */
+
 function maskCnpj(raw: string): string {
   const digits = raw.replace(/\D/g, "").slice(0, 14);
-  // 00.000.000/0000-00
   return digits
     .replace(/^(\d{2})(\d)/, "$1.$2")
     .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
@@ -42,33 +54,192 @@ function maskCnpj(raw: string): string {
     .replace(/^(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, "$1.$2.$3/$4-$5");
 }
 
+function maskPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+/* ─── Types ───────────────────────────────────────────────────────────────── */
+
+type TipoOperacao = "loja_fisica" | "patio" | "home_office" | "consignacao" | "investidor";
+type VolumeMensal = "1-5" | "6-15" | "16-30" | "30+";
+
+const TIPO_OPERACAO_LABELS: Record<TipoOperacao, string> = {
+  loja_fisica: "Loja física",
+  patio: "Pátio",
+  home_office: "Home office",
+  consignacao: "Consignação",
+  investidor: "Investidor",
+};
+
+const VOLUME_LABELS: Record<VolumeMensal, string> = {
+  "1-5": "1 a 5 veículos/mês",
+  "6-15": "6 a 15 veículos/mês",
+  "16-30": "16 a 30 veículos/mês",
+  "30+": "30+ veículos/mês",
+};
+
+const LEAD_SOURCE_OPTIONS = [
+  { value: "indicacao", label: "Indicação" },
+  { value: "google", label: "Google" },
+  { value: "instagram", label: "Instagram" },
+  { value: "evento", label: "Evento / feira" },
+  { value: "outro", label: "Outro" },
+];
+
+/* ─── Select styling ──────────────────────────────────────────────────────── */
+
+const selectClass =
+  "mt-1.5 h-11 w-full rounded-lg border border-input bg-white px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-slate-950 disabled:cursor-not-allowed disabled:opacity-50";
+
+const labelClass =
+  "font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400";
+
+/* ─── Page Component ──────────────────────────────────────────────────────── */
+
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, isLoading } = useSupabaseUser();
 
+  // Step state
   const [step, setStep] = useState<Step>(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
+
+  // Step 1 fields
   const [name, setName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [city, setCity] = useState("");
-  const [uf, setUf] = useState<string>("");
-  const [cnpj, setCnpj] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  // B5: blocking overlay shown while step 3's onboarding_complete flip is in flight
-  const [finalizing, setFinalizing] = useState(false);
+  const [uf, setUf] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [tipoOperacao, setTipoOperacao] = useState<TipoOperacao | "">("");
+  const [volumeMensal, setVolumeMensal] = useState<VolumeMensal | "">("");
 
-  // Belt-and-suspenders: middleware should send unauthed users to /login.
+  // Step 2 fields
+  const [cnpj, setCnpj] = useState("");
+  const [cnpjData, setCnpjData] = useState<CnpjLookupResult | null>(null);
+  const [cnpjLoading, setCnpjLoading] = useState(false);
+  const [cnpjError, setCnpjError] = useState<string | null>(null);
+  const [leadSource, setLeadSource] = useState("");
+
+  // Belt-and-suspenders: middleware should send unauthed users to /login
   useEffect(() => {
     if (!isLoading && !user) {
       router.replace("/login");
     }
   }, [isLoading, user, router]);
 
+  /* ─── OTP handlers ────────────────────────────────────────────────────── */
+
+  const sendOtp = useCallback(async () => {
+    if (phone.replace(/\D/g, "").length < 10) {
+      toast.error("Número de telefone inválido");
+      return;
+    }
+    setOtpLoading(true);
+    try {
+      const res = await fetch("/api/otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: phone.replace(/\D/g, ""), action: "send" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Falha ao enviar código");
+        return;
+      }
+      setOtpSent(true);
+      toast.success("Código enviado para seu WhatsApp");
+      // Dev mode: auto-fill code
+      if (data.debug_code) {
+        setOtpCode(data.debug_code);
+      }
+    } catch {
+      toast.error("Erro ao enviar código");
+    } finally {
+      setOtpLoading(false);
+    }
+  }, [phone]);
+
+  const verifyOtp = useCallback(async () => {
+    if (otpCode.length !== 6) return;
+    setOtpLoading(true);
+    try {
+      const res = await fetch("/api/otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: phone.replace(/\D/g, ""),
+          action: "verify",
+          code: otpCode,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Código incorreto");
+        return;
+      }
+      setPhoneVerified(true);
+      toast.success("Telefone verificado!");
+    } catch {
+      toast.error("Erro na verificação");
+    } finally {
+      setOtpLoading(false);
+    }
+  }, [phone, otpCode]);
+
+  /* ─── CNPJ lookup ─────────────────────────────────────────────────────── */
+
+  const lookupCnpj = useCallback(async (cnpjValue: string) => {
+    const digits = cnpjValue.replace(/\D/g, "");
+    if (digits.length !== 14) return;
+
+    setCnpjLoading(true);
+    setCnpjError(null);
+    setCnpjData(null);
+    try {
+      const res = await fetch(`/api/cnpj?cnpj=${digits}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setCnpjError(data.error ?? "CNPJ não encontrado");
+        return;
+      }
+      setCnpjData(data as CnpjLookupResult);
+      if (data.situacao !== "ATIVA") {
+        setCnpjError(`Situação cadastral: ${data.situacao}. CNPJ precisa estar ATIVO.`);
+      }
+    } catch {
+      setCnpjError("Falha na consulta. Tente novamente.");
+    } finally {
+      setCnpjLoading(false);
+    }
+  }, []);
+
+  /* ─── Validations ─────────────────────────────────────────────────────── */
+
   const step1Valid =
     name.trim().length >= 2 &&
     companyName.trim().length >= 2 &&
     !!uf &&
     !!city &&
-    cidadeExisteNoUf(uf, city);
+    cidadeExisteNoUf(uf, city) &&
+    phoneVerified &&
+    !!tipoOperacao &&
+    !!volumeMensal;
+
+  const cnpjDigits = cnpj.replace(/\D/g, "");
+  const step2Valid =
+    cnpjDigits.length === 14 &&
+    !!cnpjData &&
+    cnpjData.situacao === "ATIVA";
+
+  /* ─── Step handlers ───────────────────────────────────────────────────── */
 
   const handleStep1 = (e: FormEvent) => {
     e.preventDefault();
@@ -78,7 +249,7 @@ export default function OnboardingPage() {
 
   const handleStep2 = async (e: FormEvent) => {
     e.preventDefault();
-    if (!user || submitting) return;
+    if (!user || submitting || !step2Valid || !cnpjData) return;
     setSubmitting(true);
     try {
       const supabase = getSupabaseBrowser();
@@ -87,14 +258,17 @@ export default function OnboardingPage() {
         .update({
           name: name.trim(),
           company_name: companyName.trim(),
-          cnpj: cnpj.trim() || null,
           city: city.trim(),
           uf,
-          // NOTE: onboarding_complete moved to step 3 handler (save or skip).
-          // Per B5/L8: the wizard now has 3 steps; flipping the flag here
-          // would cause users to bypass step 3 entirely. The flip happens in
-          // either the WishlistFormSheet onSaved callback or the "Pular e
-          // fazer depois" handler.
+          phone: phone.replace(/\D/g, ""),
+          phone_verified: true,
+          cnpj: cnpj.trim(),
+          cnpj_razao_social: cnpjData.razao_social,
+          cnpj_situacao: cnpjData.situacao,
+          cnpj_cnae: cnpjData.cnae_codigo,
+          tipo_operacao: tipoOperacao as TipoOperacao,
+          volume_mensal: volumeMensal as VolumeMensal,
+          lead_source: leadSource || null,
         })
         .eq("id", user.id);
 
@@ -102,8 +276,6 @@ export default function OnboardingPage() {
         toast.error("Falha ao salvar", { description: error.message });
         return;
       }
-
-      // Advance to step 3 (first wishlist) — onboarding_complete flips there.
       setStep(3);
     } catch (err) {
       toast.error("Erro inesperado", {
@@ -114,11 +286,6 @@ export default function OnboardingPage() {
     }
   };
 
-  // B5: step 3 save flow — fired by WishlistFormSheet.onSaved AFTER the form
-  // sheet has already shown its own success toast for the wishlist insert.
-  // Sequential, non-atomic per L8: if this call fails, user stays on step 3
-  // with an error toast and can use the "Pular e fazer depois" button as
-  // recovery.
   const handleWishlistSaved = async () => {
     if (!user) return;
     setFinalizing(true);
@@ -130,19 +297,17 @@ export default function OnboardingPage() {
         .eq("id", user.id);
       if (error) {
         toast.error(
-          "Wishlist salva, mas falhou ao finalizar onboarding. Toque em 'Pular e fazer depois' pra continuar.",
+          "Wishlist salva, mas falhou ao finalizar onboarding. Toque em 'Pular' pra continuar.",
         );
         return;
       }
-      toast.success("Onboarding concluído");
+      toast.success("Onboarding concluído! Bem-vindo ao AutoAgente.");
       router.push("/app");
     } finally {
       setFinalizing(false);
     }
   };
 
-  // Skip flow — user opts not to create a first wishlist. Same target update
-  // as above (onboarding_complete=true), but no wishlist insert.
   const handleSkip = async () => {
     if (!user || submitting) return;
     setSubmitting(true);
@@ -162,6 +327,8 @@ export default function OnboardingPage() {
     }
   };
 
+  /* ─── Loading state ───────────────────────────────────────────────────── */
+
   if (isLoading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
@@ -169,6 +336,8 @@ export default function OnboardingPage() {
       </div>
     );
   }
+
+  /* ─── Render ──────────────────────────────────────────────────────────── */
 
   return (
     <div
@@ -188,6 +357,7 @@ export default function OnboardingPage() {
       />
 
       <div className="relative z-10 w-full max-w-[560px]">
+        {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Image
@@ -207,11 +377,27 @@ export default function OnboardingPage() {
           </div>
         </div>
 
+        {/* Progress bar */}
+        <div className="mb-6 flex gap-1.5">
+          {[1, 2, 3].map((s) => (
+            <div
+              key={s}
+              className={`h-1 flex-1 rounded-full transition-colors ${
+                s <= step ? "bg-[#4C46DC]" : "bg-slate-200 dark:bg-slate-800"
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Card */}
         <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:p-10">
           <div className="mb-1 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-[#4C46DC]">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#4C46DC]" />
-            {step === 3 ? "Primeira wishlist · piloto SP" : "Conta · piloto SP"}
+            {step === 1 && "Perfil · sobre você"}
+            {step === 2 && "Empresa · CNPJ"}
+            {step === 3 && "Primeira wishlist · piloto SP"}
           </div>
+
           <h1
             className="text-3xl font-semibold leading-[1.05] tracking-tight text-slate-900 dark:text-slate-50 md:text-4xl"
             style={{ fontFamily: "var(--font-fraunces, Georgia, serif)" }}
@@ -223,26 +409,26 @@ export default function OnboardingPage() {
             )}
             {step === 2 && (
               <>
-                Quase <em className="italic text-[#4C46DC]">lá</em>.
+                Dados da <em className="italic text-[#4C46DC]">empresa</em>.
               </>
             )}
             {step === 3 && "Cadastre seu primeiro carro-alvo"}
           </h1>
+
           <p className="mt-3 text-[15px] leading-relaxed text-slate-600 dark:text-slate-300">
             {step === 1 &&
-              "Três infos e você começa a ver oportunidades. Sem pagamento até o primeiro deal confirmado."}
-            {step === 2 && "CNPJ é opcional por enquanto — pode cadastrar depois em Configurações."}
+              "Seis infos e você começa a ver oportunidades. Sem pagamento até o primeiro deal confirmado."}
+            {step === 2 &&
+              "CNPJ ativo é obrigatório para firmar contratos de compra e venda na plataforma."}
             {step === 3 &&
               "Isso configura o sistema pra começar a buscar. Você pode cadastrar mais depois."}
           </p>
 
+          {/* ─── STEP 1: Profile ──────────────────────────────────────── */}
           {step === 1 && (
             <form onSubmit={handleStep1} className="mt-8 space-y-5">
               <div>
-                <Label
-                  htmlFor="name"
-                  className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
-                >
+                <Label htmlFor="name" className={labelClass}>
                   Seu nome completo
                 </Label>
                 <Input
@@ -258,10 +444,7 @@ export default function OnboardingPage() {
               </div>
 
               <div>
-                <Label
-                  htmlFor="company"
-                  className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
-                >
+                <Label htmlFor="company" className={labelClass}>
                   Nome da operação / loja
                 </Label>
                 <Input
@@ -284,6 +467,130 @@ export default function OnboardingPage() {
                 required
               />
 
+              {/* Phone + OTP */}
+              <div>
+                <Label htmlFor="phone" className={labelClass}>
+                  <Phone className="mr-1 inline h-3 w-3" />
+                  WhatsApp (para receber alertas de deals)
+                </Label>
+                <div className="mt-1.5 flex gap-2">
+                  <Input
+                    id="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(maskPhone(e.target.value));
+                      setPhoneVerified(false);
+                      setOtpSent(false);
+                      setOtpCode("");
+                    }}
+                    placeholder="(11) 99999-9999"
+                    disabled={phoneVerified}
+                    className="h-11 flex-1 bg-white dark:bg-slate-950"
+                  />
+                  {!phoneVerified && !otpSent && (
+                    <Button
+                      type="button"
+                      onClick={sendOtp}
+                      disabled={phone.replace(/\D/g, "").length < 10 || otpLoading}
+                      className="h-11 bg-[#4C46DC] px-4 text-sm font-semibold text-white hover:bg-[#3d38b8] disabled:opacity-40"
+                    >
+                      {otpLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Enviar código"
+                      )}
+                    </Button>
+                  )}
+                  {phoneVerified && (
+                    <div className="flex h-11 items-center gap-1 rounded-lg bg-emerald-50 px-3 text-sm font-medium text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Verificado
+                    </div>
+                  )}
+                </div>
+
+                {/* OTP input */}
+                {otpSent && !phoneVerified && (
+                  <div className="mt-3 flex gap-2">
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="000000"
+                      className="h-11 w-32 bg-white text-center font-mono text-lg tracking-[0.3em] dark:bg-slate-950"
+                    />
+                    <Button
+                      type="button"
+                      onClick={verifyOtp}
+                      disabled={otpCode.length !== 6 || otpLoading}
+                      className="h-11 bg-[#4C46DC] px-4 text-sm font-semibold text-white hover:bg-[#3d38b8] disabled:opacity-40"
+                    >
+                      {otpLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verificar"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={sendOtp}
+                      disabled={otpLoading}
+                      className="h-11 text-sm"
+                    >
+                      Reenviar
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Tipo operação */}
+              <div>
+                <Label htmlFor="tipo-operacao" className={labelClass}>
+                  <Building2 className="mr-1 inline h-3 w-3" />
+                  Tipo de operação
+                </Label>
+                <select
+                  id="tipo-operacao"
+                  value={tipoOperacao}
+                  onChange={(e) => setTipoOperacao(e.target.value as TipoOperacao)}
+                  required
+                  className={selectClass}
+                >
+                  <option value="" disabled>
+                    Selecione...
+                  </option>
+                  {(Object.keys(TIPO_OPERACAO_LABELS) as TipoOperacao[]).map((key) => (
+                    <option key={key} value={key}>
+                      {TIPO_OPERACAO_LABELS[key]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Volume mensal */}
+              <div>
+                <Label htmlFor="volume" className={labelClass}>
+                  Volume médio mensal
+                </Label>
+                <select
+                  id="volume"
+                  value={volumeMensal}
+                  onChange={(e) => setVolumeMensal(e.target.value as VolumeMensal)}
+                  required
+                  className={selectClass}
+                >
+                  <option value="" disabled>
+                    Selecione...
+                  </option>
+                  {(Object.keys(VOLUME_LABELS) as VolumeMensal[]).map((key) => (
+                    <option key={key} value={key}>
+                      {VOLUME_LABELS[key]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex items-center justify-end border-t border-slate-100 pt-5 dark:border-slate-800">
                 <Button
                   type="submit"
@@ -296,42 +603,110 @@ export default function OnboardingPage() {
               </div>
             </form>
           )}
+
+          {/* ─── STEP 2: CNPJ ─────────────────────────────────────────── */}
           {step === 2 && (
             <form onSubmit={handleStep2} className="mt-8 space-y-5">
               <div>
-                <Label
-                  htmlFor="cnpj"
-                  className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
-                >
-                  CNPJ <span className="text-slate-400 normal-case">(opcional)</span>
+                <Label htmlFor="cnpj" className={labelClass}>
+                  CNPJ da empresa
                 </Label>
-                <Input
-                  id="cnpj"
-                  type="text"
-                  inputMode="numeric"
-                  value={cnpj}
-                  onChange={(e) => setCnpj(maskCnpj(e.target.value))}
-                  placeholder="00.000.000/0000-00"
-                  className="mt-1.5 h-11 bg-white dark:bg-slate-950"
-                  maxLength={18}
-                />
-                <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-                  Necessário antes do primeiro deal — fica guardado em Configurações.
-                </p>
+                <div className="mt-1.5 flex gap-2">
+                  <Input
+                    id="cnpj"
+                    type="text"
+                    inputMode="numeric"
+                    value={cnpj}
+                    onChange={(e) => {
+                      const masked = maskCnpj(e.target.value);
+                      setCnpj(masked);
+                      setCnpjData(null);
+                      setCnpjError(null);
+                      // Auto-lookup when fully typed
+                      if (masked.replace(/\D/g, "").length === 14) {
+                        lookupCnpj(masked);
+                      }
+                    }}
+                    placeholder="00.000.000/0000-00"
+                    className="h-11 flex-1 bg-white dark:bg-slate-950"
+                    maxLength={18}
+                  />
+                  {cnpjLoading && (
+                    <div className="flex h-11 items-center px-3">
+                      <Loader2 className="h-5 w-5 animate-spin text-[#4C46DC]" />
+                    </div>
+                  )}
+                </div>
+                {cnpjError && (
+                  <div className="mt-2 flex items-start gap-2 rounded-lg bg-red-50 p-3 text-[12px] text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{cnpjError}</span>
+                  </div>
+                )}
               </div>
 
-              <div className="rounded-xl border border-[#4C46DC]/15 bg-[#4C46DC]/[0.03] p-4 text-[12px] text-slate-600 dark:border-[#4C46DC]/30 dark:bg-[#4C46DC]/10 dark:text-slate-300">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#4C46DC]" />
-                  <div>
-                    <div className="font-semibold text-slate-900 dark:text-slate-100">
-                      {name || "—"} · {companyName || "—"}
-                    </div>
-                    <div className="mt-0.5">
-                      {city || "—"} / {uf}
+              {/* Auto-fill card */}
+              {cnpjData && (
+                <div className="rounded-xl border border-[#4C46DC]/15 bg-[#4C46DC]/[0.03] p-4 text-[12px] dark:border-[#4C46DC]/30 dark:bg-[#4C46DC]/10">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#4C46DC]" />
+                    <div className="space-y-1">
+                      <div className="font-semibold text-slate-900 dark:text-slate-100">
+                        {cnpjData.razao_social}
+                      </div>
+                      {cnpjData.nome_fantasia && (
+                        <div className="text-slate-600 dark:text-slate-300">
+                          {cnpjData.nome_fantasia}
+                        </div>
+                      )}
+                      <div className="text-slate-500 dark:text-slate-400">
+                        Situação: <span className={cnpjData.situacao === "ATIVA" ? "font-semibold text-emerald-600" : "font-semibold text-red-600"}>{cnpjData.situacao}</span>
+                      </div>
+                      <div className="text-slate-500 dark:text-slate-400">
+                        CNAE: {cnpjData.cnae_codigo} — {cnpjData.cnae_descricao}
+                      </div>
+                      <div className="text-slate-500 dark:text-slate-400">
+                        {cnpjData.endereco}, {cnpjData.municipio}/{cnpjData.uf}
+                      </div>
                     </div>
                   </div>
                 </div>
+              )}
+
+              {/* Summary card */}
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-4 text-[12px] text-slate-600 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300">
+                <div className="flex items-start gap-2">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                  <div>
+                    <div className="font-semibold text-slate-900 dark:text-slate-100">
+                      {name} · {companyName}
+                    </div>
+                    <div className="mt-0.5">
+                      {city}/{uf} · {TIPO_OPERACAO_LABELS[tipoOperacao as TipoOperacao]} · {VOLUME_LABELS[volumeMensal as VolumeMensal]}
+                    </div>
+                    <div className="mt-0.5">WhatsApp: {phone} ✓</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lead source (optional) */}
+              <div>
+                <Label htmlFor="lead-source" className={labelClass}>
+                  Como conheceu o AutoAgente? <span className="normal-case text-slate-400">(opcional)</span>
+                </Label>
+                <select
+                  id="lead-source"
+                  value={leadSource}
+                  onChange={(e) => setLeadSource(e.target.value)}
+                  className={selectClass}
+                >
+                  <option value="">Selecione...</option>
+                  {LEAD_SOURCE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex items-center justify-between border-t border-slate-100 pt-5 dark:border-slate-800">
@@ -346,7 +721,7 @@ export default function OnboardingPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={submitting}
+                  disabled={!step2Valid || submitting}
                   className="group h-11 bg-[#4C46DC] px-6 text-sm font-semibold text-white hover:bg-[#3d38b8] disabled:opacity-40"
                 >
                   {submitting ? "Salvando..." : "Continuar"}
@@ -355,19 +730,10 @@ export default function OnboardingPage() {
               </div>
             </form>
           )}
+
+          {/* ─── STEP 3: Wishlist ─────────────────────────────────────── */}
           {step === 3 && (
             <div className="mt-8 space-y-6">
-              {/*
-                B5 + L8: step 3 save flow is sequential and non-atomic.
-                1) WishlistFormSheet runs useCreateWishlist.mutateAsync; on
-                   success it fires its own toast.success("Wishlist ... criada")
-                   and then invokes onSaved(created).
-                2) handleWishlistSaved performs the SECOND step (the
-                   onboarding_complete flip), with its own loading overlay
-                   and a single additional success toast.
-                3) On failure of step 2, user stays on step 3 with a recovery
-                   message and "Pular e fazer depois" can retry the flip.
-              */}
               <WishlistFormSheet
                 layout="inline"
                 submitLabel="Salvar e começar"
