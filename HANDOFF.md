@@ -368,7 +368,107 @@ Ultimo commit: 11adfc1 — feat: add agent runtime + Scraper agent with tools
 
 ---
 
-## 12. Decisoes de design importantes
+## 12. Documentacao do grunixx (Gabriel) — .planning/
+
+O repo tem uma estrutura de planejamento muito detalhada criada pelo grunixx (Gabriel, filho do Felipe). **Ler esses arquivos e fundamental antes de comecar qualquer trabalho.**
+
+### 12.1 Arquivos-chave no .planning/
+
+| Arquivo | O que contem |
+|---------|-------------|
+| `.planning/PROJECT.md` | Visao do produto, roadmap com 13 fases, decisoes-chave, constraints |
+| `.planning/ROADMAP.md` | Sequencia de execucao detalhada, dependencias entre fases, status de cada fase |
+| `.planning/STATE.md` | Estado da maquina GSD: fases completas, foco atual, metricas, decisoes, blockers |
+| `.planning/CONTINUE-HERE.md` | Ponto exato de retomada da ultima sessao (2026-04-30) com passos detalhados |
+| `.planning/PIVOT-3.md` | Direcao foundation-first autorizada pelo Felipe |
+| `.planning/REQUIREMENTS.md` | Matriz de rastreabilidade de 27 requisitos (INFRA, FIPE, NEG, STATE, INTEL, BATCH, EXPORT) |
+
+### 12.2 Status das fases (ate 2026-04-30)
+
+| Fase | Status | Notas |
+|------|--------|-------|
+| 1. Chat Manual | SHIPPED | Motor reutilizavel na Phase 10 futura |
+| 2-4. Inteligencia/Batch | DEFERRED | Indefinidamente |
+| 5. v3 Product Shell | SHIPPED | Dashboard + Backstage + dark mode |
+| 6. Supabase Foundation | EM EXECUCAO | Auth UI + hooks faltando (scaffold 50%) |
+| 7. Wishlist UI | COMPLETE (2026-04-25) | 12/12 plans, 381 testes, UAT pendente |
+| 8. Scraping Pipeline | COMPLETE | Production-live em workspace.autoagente.ai |
+| 9. Matching Engine | COMPLETE (2026-04-29) | 5/5 plans, INSERT-only realtime + sidebar badge |
+| 10. Outreach Sender | DEFERRED | Aguarda algoritmo de negociacao desenhado com Felipe |
+| 11. Agent Loop | DEFERRED | Aguarda algoritmo de negociacao desenhado com Felipe |
+| 12. Inbox Dashboard | DEFERRED | Depende de 10/11 |
+| 13a. Billing + Stripe | SEEDED | Bloqueado em decisao de payment provider (Felipe rejeitou Stripe, avaliando Asaas/Pagar.me/MP/Iugu) |
+| 13b. Digital Contracts | SEEDED | Depende de 13a |
+| 13c. Escrow | DEFERRED | Depende de agent deals |
+
+### 12.3 Decisoes bloqueadas pelo Felipe (pai)
+
+1. **KYC documents:** Quais docs exigir no signup (light vs heavy vs deferred)
+2. **Payment provider:** Stripe rejeitado. Felipe avaliando Asaas / Pagar.me / MercadoPago / Iugu / PagBank / EBANX
+3. **Pre-setar sistema:** Felipe quer scaffolding de DB/interface para KYC + pagamento serem plug-in quando decidido
+
+### 12.4 Decisoes locked (nao-negociaveis)
+
+- **Stack:** Next.js 15 App Router, TypeScript strict, Tailwind v4, shadcn/ui, pnpm, Biome, Zustand -> Supabase
+- **LLM:** Claude Sonnet 4.6 exclusivamente (nao OpenAI/Gemini) para o produto; sistema de agentes usa tiering (Opus/Sonnet/Haiku)
+- **Deploy:** Vercel primary + DO secondary
+- **DB:** Supabase (Postgres, auth, RLS, real-time) — nao self-hosted
+- **Scraping:** Apify managed actors (ribtools para WebMotors)
+- **Stripe rejeitado:** Nao propor Stripe. Felipe avalia processadores brasileiros
+- **Deploy auto:** GitHub -> Vercel auto-deploy funciona. NAO rodar `vercel deploy --prod` manualmente
+
+### 12.5 CI/CD (.github/workflows/ci.yml)
+
+Pipeline GitHub Actions em PR/push para main:
+1. pnpm install (frozen)
+2. Biome linting
+3. TypeScript typecheck
+4. Vitest unit tests
+5. Next.js build (com dummy API keys para CI)
+
+### 12.6 GSD Workflow
+
+O repo usa um framework "Get Shit Done" (GSD) com:
+- Commands: `/gsd-quick`, `/gsd-debug`, `/gsd-execute-phase`
+- Security manifest em `.claude/settings.json` (denied patterns para .env, secrets, etc)
+- Hook system para SessionStart, PostToolUse, PreToolUse
+- Cada fase tem: SEED.md (discovery), CONTEXT.md (decisoes D-01..D-NN), PLAN.md (planos de execucao), REVIEW.md (code review)
+
+### 12.7 Itens pendentes do CONTINUE-HERE.md (2026-04-30)
+
+1. Aplicar fixes criticos Phase 8 (CR-01 unique constraint scrape_runs, HI-01 finally block, HI-04 sinistro regex)
+2. Monitorar primeiro run de producao Apify (schedule ID: BuwV5h3eekRF0x1qB)
+3. Pre-setar scaffolding KYC + PaymentGateway quando Felipe responder
+4. Phase 7 HIGH-01 popover fix
+5. Phase 9 CR-01 auth check + index optimization
+6. Phase 8.10 fipe-retry restoration (bloqueado em Vercel Pro upgrade)
+
+### 12.8 URLs de referencia
+
+- Producao: `https://workspace.autoagente.ai`
+- Apify schedule: `BuwV5h3eekRF0x1qB`
+- Apify webhook: `qLbRHOsV4rsElbu6h`
+- Apify webhook delivery logs: `https://api.apify.com/v2/webhooks/qLbRHOsV4rsElbu6h/dispatches`
+
+---
+
+## 13. Relacao entre as duas linhas de trabalho
+
+O repo tem DUAS linhas de desenvolvimento que precisam ser reconciliadas:
+
+**Linha 1 (grunixx/main):** Produto v3 com fases 1-13, GSD workflow, scraping via Apify webhook, matching engine, wishlist UI. Scraping e feito via actor Apify com webhook callback para `/api/scrape/webmotors/webhook`. Agentes de negociacao (Phase 10/11) estao DEFERRED aguardando algoritmo.
+
+**Linha 2 (feat/agent-company-v3.2):** Sistema multi-agente Paperclip com 14 agentes, runtime custom, scraper agent autonomo que chama Apify diretamente via tool_use. Abordagem diferente do scraping — o agente decide o que scrappear e quando.
+
+**Como reconciliar:**
+- O scraper da Linha 2 pode COMPLEMENTAR o webhook da Linha 1 (nao substituir imediatamente)
+- Os agentes Analista, Pricing, e CEO da Linha 2 sao o que a Linha 1 chama de "algoritmo de negociacao" que esta DEFERRED
+- O sistema de agentes e o proximo passo natural apos as fases 1-9 estarem completas
+- Merge da branch `feat/agent-company-v3.2` para `main` traz o runtime sem conflitos (diretorios novos)
+
+---
+
+## 14. Decisoes de design importantes
 
 1. **Runtime proprio vs framework:** Optamos por um runtime custom simples (`runtime.ts`) em vez de usar LangChain, CrewAI, ou Vercel AI SDK. Motivo: controle total sobre o loop, sem dependencias pesadas, facil de debugar.
 
