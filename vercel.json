@@ -14,7 +14,8 @@
     "src/app/api/agents/cto/route.ts": { "maxDuration": 90 },
     "src/app/api/agents/cmo/route.ts": { "maxDuration": 90 },
     "src/app/api/agents/cfo/route.ts": { "maxDuration": 90 },
-    "src/app/api/agents/clo/route.ts": { "maxDuration": 90 }
+    "src/app/api/agents/clo/route.ts": { "maxDuration": 90 },
+    "src/app/api/agents/ceo/route.ts": { "maxDuration": 180 }
   },
   "crons": [
     { "path": "/api/cron/listings-cleanup", "schedule": "0 4 * * *" },
@@ -31,6 +32,7 @@
     { "path": "/api/agents/cto", "schedule": "30 13 * * 1-5" },
     { "path": "/api/agents/cmo", "schedule": "30 14 * * 1-5" },
     { "path": "/api/agents/cfo", "schedule": "30 15 * * 1-5" },
-    { "path": "/api/agents/clo", "schedule": "30 16 * * 1-5" }
+    { "path": "/api/agents/clo", "schedule": "30 16 * * 1-5" },
+    { "path": "/api/agents/ceo", "schedule": "0 12 * * 1" }
   ]
 }
