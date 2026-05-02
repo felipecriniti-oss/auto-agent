@@ -10,7 +10,11 @@
     "src/app/api/agents/contratos/route.ts": { "maxDuration": 90 },
     "src/app/api/agents/custos/route.ts": { "maxDuration": 60 },
     "src/app/api/agents/captacao/route.ts": { "maxDuration": 90 },
-    "src/app/api/agents/conteudo/route.ts": { "maxDuration": 90 }
+    "src/app/api/agents/conteudo/route.ts": { "maxDuration": 90 },
+    "src/app/api/agents/cto/route.ts": { "maxDuration": 90 },
+    "src/app/api/agents/cmo/route.ts": { "maxDuration": 90 },
+    "src/app/api/agents/cfo/route.ts": { "maxDuration": 90 },
+    "src/app/api/agents/clo/route.ts": { "maxDuration": 90 }
   },
   "crons": [
     { "path": "/api/cron/listings-cleanup", "schedule": "0 4 * * *" },
@@ -23,6 +27,10 @@
     { "path": "/api/agents/contratos", "schedule": "0 17 * * 1-5" },
     { "path": "/api/agents/custos", "schedule": "0 12 * * *" },
     { "path": "/api/agents/captacao", "schedule": "0 13 * * 1-5" },
-    { "path": "/api/agents/conteudo", "schedule": "0 17 * * 3" }
+    { "path": "/api/agents/conteudo", "schedule": "0 17 * * 3" },
+    { "path": "/api/agents/cto", "schedule": "30 13 * * 1-5" },
+    { "path": "/api/agents/cmo", "schedule": "30 14 * * 1-5" },
+    { "path": "/api/agents/cfo", "schedule": "30 15 * * 1-5" },
+    { "path": "/api/agents/clo", "schedule": "30 16 * * 1-5" }
   ]
 }
