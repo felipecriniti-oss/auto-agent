@@ -430,6 +430,68 @@ export type Tables = {
     Update: Partial<Tables["opt_out_list"]["Insert"]>;
     Relationships: [];
   };
+
+  // ─── Agent System Tables (v3.2 — multi-agent runtime) ─────────────
+
+  agent_runs: {
+    Row: {
+      id: string;
+      run_id: string;
+      agent: string;
+      status: "running" | "completed" | "failed" | "timeout";
+      turns: number;
+      input_tokens: number;
+      output_tokens: number;
+      tool_calls: number;
+      tool_call_details: string | null;
+      final_response: string | null;
+      error: string | null;
+      duration_ms: number;
+      started_at: string;
+      ended_at: string | null;
+      created_at: string;
+    };
+    Insert: {
+      run_id: string;
+      agent: string;
+      status?: "running" | "completed" | "failed" | "timeout";
+      turns?: number;
+      input_tokens?: number;
+      output_tokens?: number;
+      tool_calls?: number;
+      tool_call_details?: string | null;
+      final_response?: string | null;
+      error?: string | null;
+      duration_ms?: number;
+      started_at?: string;
+      ended_at?: string | null;
+    };
+    Update: Partial<Tables["agent_runs"]["Insert"]>;
+    Relationships: [];
+  };
+
+  agent_comms: {
+    Row: {
+      id: string;
+      from_agent: string;
+      to_agent: string;
+      message_type: "request" | "response" | "escalation" | "notification";
+      priority: "low" | "medium" | "high" | "critical";
+      deal_id: string | null;
+      summary: string | null;
+      created_at: string;
+    };
+    Insert: {
+      from_agent: string;
+      to_agent: string;
+      message_type?: "request" | "response" | "escalation" | "notification";
+      priority?: "low" | "medium" | "high" | "critical";
+      deal_id?: string | null;
+      summary?: string | null;
+    };
+    Update: Partial<Tables["agent_comms"]["Insert"]>;
+    Relationships: [];
+  };
 };
 
 export type Database = {
@@ -475,4 +537,6 @@ export type DbScrapeRun = Tables["scrape_runs"]["Row"];
 export type DbDeal = Tables["deals"]["Row"];
 export type DbSubscription = Tables["subscriptions"]["Row"];
 export type DbKycDocument = Tables["kyc_documents"]["Row"];
+export type DbAgentRun = Tables["agent_runs"]["Row"];
+export type DbAgentComm = Tables["agent_comms"]["Row"];
 export type DbOpportunityEnriched = Database["public"]["Views"]["opportunities_enriched"]["Row"];
