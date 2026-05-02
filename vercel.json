@@ -6,7 +6,8 @@
     "src/app/api/agents/analista/route.ts": { "maxDuration": 120 },
     "src/app/api/agents/pricing/route.ts": { "maxDuration": 90 },
     "src/app/api/agents/compliance/route.ts": { "maxDuration": 90 },
-    "src/app/api/agents/negociador/route.ts": { "maxDuration": 180 }
+    "src/app/api/agents/negociador/route.ts": { "maxDuration": 180 },
+    "src/app/api/agents/contratos/route.ts": { "maxDuration": 90 }
   },
   "crons": [
     { "path": "/api/cron/listings-cleanup", "schedule": "0 4 * * *" },
@@ -15,6 +16,7 @@
     { "path": "/api/agents/analista", "schedule": "0 11 * * *" },
     { "path": "/api/agents/pricing", "schedule": "0 12 * * *" },
     { "path": "/api/agents/compliance", "schedule": "0 13 * * 5" },
-    { "path": "/api/agents/negociador", "schedule": "0 12-22/2 * * *" }
+    { "path": "/api/agents/negociador", "schedule": "0 12-22/2 * * *" },
+    { "path": "/api/agents/contratos", "schedule": "0 17 * * 1-5" }
   ]
 }
