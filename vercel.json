@@ -2,11 +2,13 @@
   "functions": {
     "src/app/api/negotiate/stream/route.ts": { "maxDuration": 60 },
     "src/app/api/fipe/route.ts": { "maxDuration": 30 },
-    "src/app/api/agents/scraper/route.ts": { "maxDuration": 120 }
+    "src/app/api/agents/scraper/route.ts": { "maxDuration": 120 },
+    "src/app/api/agents/analista/route.ts": { "maxDuration": 120 }
   },
   "crons": [
     { "path": "/api/cron/listings-cleanup", "schedule": "0 4 * * *" },
     { "path": "/api/cron/fipe-retry", "schedule": "0 5 * * *" },
-    { "path": "/api/agents/scraper", "schedule": "0 */4 * * *" }
+    { "path": "/api/agents/scraper", "schedule": "0 */4 * * *" },
+    { "path": "/api/agents/analista", "schedule": "0 11 * * *" }
   ]
 }
