@@ -1,0 +1,197 @@
+schema: paperclip/v1
+
+agents:
+  ceo:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-opus-4-6
+    inputs:
+      env:
+        GH_TOKEN:
+          kind: secret
+          requirement: optional
+
+  cto:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-sonnet-4-6
+    inputs:
+      env:
+        SUPABASE_URL:
+          kind: secret
+          requirement: required
+        SUPABASE_SERVICE_ROLE_KEY:
+          kind: secret
+          requirement: required
+
+  cmo:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-sonnet-4-6
+    inputs:
+      env:
+        WHATSAPP_TOKEN:
+          kind: secret
+          requirement: required
+
+  cfo:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-sonnet-4-6
+
+  clo:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-sonnet-4-6
+
+  scraper:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-haiku-4-5
+    inputs:
+      env:
+        PROXY_URL:
+          kind: secret
+          requirement: optional
+
+  negociador:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-opus-4-6
+    inputs:
+      env:
+        WHATSAPP_TOKEN:
+          kind: secret
+          requirement: required
+        WHATSAPP_PHONE_ID:
+          kind: secret
+          requirement: required
+
+  analista:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-sonnet-4-6
+    inputs:
+      env:
+        FIPE_API_KEY:
+          kind: secret
+          requirement: required
+        SUPABASE_URL:
+          kind: secret
+          requirement: required
+
+  captacao:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-sonnet-4-6
+    inputs:
+      env:
+        WHATSAPP_TOKEN:
+          kind: secret
+          requirement: required
+
+  conteudo:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-sonnet-4-6
+
+  custos:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-haiku-4-5
+    inputs:
+      env:
+        SUPABASE_URL:
+          kind: secret
+          requirement: required
+
+  pricing:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-sonnet-4-6
+    inputs:
+      env:
+        FIPE_API_KEY:
+          kind: secret
+          requirement: required
+
+  contratos:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-sonnet-4-6
+
+  compliance:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-sonnet-4-6
+
+routines:
+  market-monitoring:
+    description: Scraper varre plataformas de anúncios a cada 4 horas
+    assignee: scraper
+    triggers:
+      - kind: schedule
+        cronExpression: "0 */4 * * *"
+        timezone: America/Sao_Paulo
+
+  daily-analytics:
+    description: Analista gera relatório diário de mercado e performance
+    assignee: analista
+    triggers:
+      - kind: schedule
+        cronExpression: "0 8 * * *"
+        timezone: America/Sao_Paulo
+
+  daily-cost-report:
+    description: Custos gera P&L diário e consumo de APIs
+    assignee: custos
+    triggers:
+      - kind: schedule
+        cronExpression: "0 9 * * *"
+        timezone: America/Sao_Paulo
+
+  weekly-strategy-review:
+    description: CEO revisa KPIs e define prioridades da semana
+    assignee: ceo
+    triggers:
+      - kind: schedule
+        cronExpression: "0 9 * * 1"
+        timezone: America/Sao_Paulo
+
+  weekly-compliance-check:
+    description: Compliance audita operações da semana
+    assignee: compliance
+    triggers:
+      - kind: schedule
+        cronExpression: "0 10 * * 5"
+        timezone: America/Sao_Paulo
+
+  lead-generation-daily:
+    description: Captação busca e contata novos lojistas potenciais
+    assignee: captacao
+    triggers:
+      - kind: schedule
+        cronExpression: "0 10 * * 1-5"
+        timezone: America/Sao_Paulo
+
+  contract-followup:
+    description: Contratos verifica assinaturas pendentes
+    assignee: contratos
+    triggers:
+      - kind: schedule
+        cronExpression: "0 14 * * 1-5"
+        timezone: America/Sao_Paulo
